@@ -1,0 +1,22 @@
+{
+  "name": "5568-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition": "^3.0.9",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.3",
+    "@types/node": "^22.19.15",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "hardhat": "^3.1.11",
+    "typescript": "~5.8.3",
+    "viem": "^2.47.0"
+  },
+  "scripts": {
+    "node": "hardhat node",
+    "play": "hardhat run --network hardhatMainnet",
+    "play:local": "hardhat run --network localhost",
+    "test": "hardhat test",
+    "test:nodejs": "hardhat test nodejs",
+    "test:fast": "hardhat test --no-compile"
+  }
+}

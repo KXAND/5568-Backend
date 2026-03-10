@@ -1,0 +1,83 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Hardhat: Run Current Script (Fresh EVM)",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/node_modules/hardhat/dist/src/cli.js",
+            "args": [
+                "run",
+                "${relativeFile}",
+                "--network",
+                "hardhatMainnet"
+            ],
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "Hardhat: Start Local Node",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/node_modules/hardhat/dist/src/cli.js",
+            "args": [
+                "node"
+            ],
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "Hardhat: Run Current Script (Localhost)",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/node_modules/hardhat/dist/src/cli.js",
+            "args": [
+                "run",
+                "${relativeFile}",
+                "--network",
+                "localhost"
+            ],
+            "preLaunchTask": "Hardhat: Node (Background)",
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "Hardhat: Test All",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/node_modules/hardhat/dist/src/cli.js",
+            "args": [
+                "test"
+            ],
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "Hardhat: Test Current",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/node_modules/hardhat/dist/src/cli.js",
+            "args": [
+                "test",
+                "${relativeFile}"
+            ],
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        }
+    ]
+}
