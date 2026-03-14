@@ -44,7 +44,6 @@
                 "--network",
                 "localhost"
             ],
-            "preLaunchTask": "Hardhat: Node (Background)",
             "console": "integratedTerminal",
             "skipFiles": [
                 "<node_internals>/**"
