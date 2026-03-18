@@ -5,16 +5,18 @@ Backend repository for our DeFi lending protocol project on Ethereum.
 ## Before You Start
 
 Please read [GIT_RULES.md](./GIT_RULES.md) first and follow it during development.
+Frontend integration guide: [API.md](./API.md)
 
 ## Targets (PM not finalized yet)
 
 Basic:
 
-- [ ] A lending pool where users can **supply**, **withdraw**, **borrow**, and **repay**
-- [ ] Over-collateralization logic
-- [ ] Interest rate model
-  - [ ] Dynamic interest rate model based on utilization rate
-  - [ ] Accrue interest per block (lenders and borrowers)
+- [x] A lending pool where users can **supply**, **withdraw**, **borrow**, and **repay**
+- [x] Over-collateralization logic
+- [x] Interest rate model (kinked)
+  - [x] Dynamic interest rate model based on utilization rate
+  - [x] Accrue interest per block (lenders and borrowers)
+- [x] Oracle (simple fixed-price)
 
 Bonus:
 
@@ -22,7 +24,7 @@ Bonus:
   - [ ] Allow a third party to liquidate a position when health factor < 1
   - [ ] Liquidation Spread/Bonus
 - [ ] Flash Loan
-- [ ] Oracle
+- [ ] Real Oracle
 - [ ] Advanced tokenomics: issue a governance token (like COMP or AAVE) as a reward for lenders/borrowers (liquidity mining)
 - [ ] ~~Analytics & UX~~
 
