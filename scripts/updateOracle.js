@@ -89,7 +89,6 @@ async function main() {
   try {
     // 检查调用者是否是owner
     const owner = await oracle.read.owner();
-    console.log(`Oracle所有者: ${owner}`);
     
     // 获取当前钱包客户端
     const [walletClient] = await viem.getWalletClients();
