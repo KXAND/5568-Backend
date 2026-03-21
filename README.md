@@ -44,52 +44,55 @@ Bonus:
 
 ## VS Code + Hardhat Commands
 
+Please use `pnpm` as your package manager. You can install it by:
+
+```shell
+npm install -g pnpm@latest-10
+```
+
 Install dependencies:
 
-```powershell
+```shell
 pnpm install
 ```
 
-Compile:
+Compile contracts:
 
-```powershell
+```shell
 pnpm exec hardhat compile
 ```
 
 Run tests:
 
-```powershell
+```shell
 pnpm exec hardhat test
 ```
 
----
+### Run a Script on a Fresh EVM
 
-## NPM Deployment (Local)
+For example, to run `scripts/deploy.ts`:
 
-### Step 1: Install
-
-```cmd
-cd 5568-Backend
-npm install
+```shell
+pnpm exec hardhat run scripts/deploy.ts --network hardhatMainnet
 ```
 
-### Step 2: Start Node
+### Run a Script on Localhost
 
-```cmd
-npx hardhat node
+Start a local node:
+
+```shell
+pnpm exec hardhat node
 ```
 
-### Step 3: Deploy
+Then run a TypeScript script on localhost. For example:
 
-```cmd
-npx hardhat run scripts/deploy.ts --network localhost
+```shell
+pnpm exec hardhat run scripts/play.ts --network localhost
 ```
 
-### Step 4: Connect Remix (Optional)
+Or connect Remix to your local node:
 
-> Skip for CLI-only.
-
-1. Open https://remix.ethereum.org
-2. Deploy & Run → Environment: Custom - HttpProvider
-3. URL: `http://127.0.0.1:8545`
-4. Select contract → At Address → Enter deployed address
+1. Open [Remix](https://remix.ethereum.org) or launch your Remix Desktop
+2. Open `Deploy & Run Transactions`
+3. Select `Dev - Hardhat Provider`
+4. If needed, set the URL to `http://127.0.0.1:8545`
