@@ -4,19 +4,18 @@ Backend repository for our DeFi lending protocol project on Ethereum.
 
 ## Before You Start
 
-Please read [GIT_RULES.md](./GIT_RULES.md) first and follow it during development.
-Frontend integration guide: [API.md](./API.md)
+Please read [GIT_RULES.md](./GIT_RULES.md) first and follow it during development. Frontend integration guide: [API.md](./API.md)
 
 ## Targets (PM not finalized yet)
 
 Basic:
 
-- [x] A lending pool where users can **supply**, **withdraw**, **borrow**, and **repay**
-- [x] Over-collateralization logic
-- [x] Interest rate model (kinked)
-  - [x] Dynamic interest rate model based on utilization rate
-  - [x] Accrue interest per block (lenders and borrowers)
-- [x] Oracle (simple fixed-price)
+- [ ] A lending pool where users can **supply**, **withdraw**, **borrow**, and **repay**
+- [ ] Over-collateralization logic
+- [ ] Interest rate model (kinked)
+  - [ ] Dynamic interest rate model based on utilization rate
+  - [ ] Accrue interest per block (lenders and borrowers)
+- [ ] Oracle (simple fixed-price)
 
 Bonus:
 
@@ -62,3 +61,35 @@ Run tests:
 ```powershell
 pnpm exec hardhat test
 ```
+
+---
+
+## NPM Deployment (Local)
+
+### Step 1: Install
+
+```cmd
+cd 5568-Backend
+npm install
+```
+
+### Step 2: Start Node
+
+```cmd
+npx hardhat node
+```
+
+### Step 3: Deploy
+
+```cmd
+npx hardhat run scripts/deploy.ts --network localhost
+```
+
+### Step 4: Connect Remix (Optional)
+
+> Skip for CLI-only.
+
+1. Open https://remix.ethereum.org
+2. Deploy & Run → Environment: Custom - HttpProvider
+3. URL: `http://127.0.0.1:8545`
+4. Select contract → At Address → Enter deployed address

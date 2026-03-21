@@ -14,7 +14,7 @@ contract LendingPool is Ownable {
 
   IERC20 public immutable collateralToken; // e.g. BobToken
   IERC20 public immutable borrowToken;     // e.g. AliceToken
-  PoolCoin public immutable poolCoin;      // deposit receipt (shares)
+  PoolCoin public immutable poolCoin;       // deposit receipt (shares)
   SimpleOracle public oracle;
   InterestRateModel public interestRateModel;
 
@@ -29,6 +29,16 @@ contract LendingPool is Ownable {
   mapping(address => uint256) public userBorrowPrincipal;
   mapping(address => uint256) public userBorrowIndex;
 
+  // 借款用户列表
+  mapping(address => bool) public isBorrower;
+  address[] public borrowers;
+
+  // 清算相关
+  uint256 public constant BONUS_BASE = 10000;
+  uint256 public liquidationBonus = 500;
+  uint256 public liquidationThreshold = 1e18;
+  uint256 public totalLiquidations;
+
   event Deposit(address indexed user, uint256 amount, uint256 shares);
   event Withdraw(address indexed user, uint256 amount, uint256 shares);
   event Borrow(address indexed user, uint256 amount);
@@ -37,6 +47,16 @@ contract LendingPool is Ownable {
   event SetLtv(uint256 newLtv);
   event SetOracle(address newOracle);
   event SetInterestRateModel(address newModel);
+  // 清算事件
+  event SetLiquidationBonus(uint256 bonus);
+  event SetLiquidationThreshold(uint256 threshold);
+  event LiquidationExecuted(
+    address indexed liquidator,
+    address indexed borrower,
+    uint256 debtRepaid,
+    uint256 collateralLiquidated,
+    uint256 bonus
+  );
 
   constructor(
     address _collateralToken,
@@ -71,6 +91,135 @@ contract LendingPool is Ownable {
   function setInterestRateModel(address newModel) external onlyOwner {
     interestRateModel = InterestRateModel(newModel);
     emit SetInterestRateModel(newModel);
+  }
+
+  // 清算配置函数
+  function setLiquidationBonus(uint256 _bonus) external onlyOwner {
+    require(_bonus <= 3000, "Bonus too high");
+    liquidationBonus = _bonus;
+    emit SetLiquidationBonus(_bonus);
+  }
+
+  function setLiquidationThreshold(uint256 _threshold) external onlyOwner {
+    require(_threshold > 0, "Threshold must be > 0");
+    liquidationThreshold = _threshold;
+    emit SetLiquidationThreshold(_threshold);
+  }
+
+  // 清算函数
+  function liquidate(address borrower, uint256 repayAmount) external {
+    require(borrower != address(0), "Invalid borrower");
+    
+    // 检查健康因子
+    uint256 userHealthFactor = this.healthFactor(borrower);
+    require(userHealthFactor < liquidationThreshold, "Position healthy");
+    
+    // 检查债务
+    uint256 debt = _borrowBalance(borrower);
+    require(debt > 0, "No debt");
+    
+    // 确定实际还款金额
+    uint256 actualRepay = repayAmount == 0 || repayAmount > debt ? debt : repayAmount;
+    
+    // 从清算者处接收还款代币
+    borrowToken.safeTransferFrom(msg.sender, address(this), actualRepay);
+    
+    // 直接还款
+    _repayInternal(borrower, actualRepay);
+    
+    // 计算清算奖励
+    uint256 bonus = (actualRepay * liquidationBonus) / BONUS_BASE;
+    
+    // 获取借款人抵押品
+    uint256 borrowerShares = poolCoin.balanceOf(borrower);
+    require(borrowerShares > 0, "No collateral");
+    
+    // 计算清算抵押品数量 (简化版: 按价值比例)
+    uint256 collateralPrice = oracle.getPrice(address(collateralToken));
+    uint256 borrowPrice = oracle.getPrice(address(borrowToken));
+    uint256 totalValue = ((actualRepay + bonus) * borrowPrice) / 1e18;
+    uint256 collateralToLiquidate = (totalValue * 1e18) / collateralPrice;
+    
+    // 不能超过借款人抵押品
+    uint256 maxCollateral = _underlyingFromShares(borrowerShares);
+    if (collateralToLiquidate > maxCollateral) {
+      collateralToLiquidate = maxCollateral;
+    }
+    
+    // 销毁对应份额
+    uint256 sharesToBurn = (collateralToLiquidate * 1e18) / liquidityIndex;
+    if (sharesToBurn > borrowerShares) {
+      sharesToBurn = borrowerShares;
+    }
+    
+    poolCoin.burn(borrower, sharesToBurn);
+    collateralToken.safeTransfer(msg.sender, collateralToLiquidate);
+    
+    totalLiquidations++;
+    
+    emit LiquidationExecuted(msg.sender, borrower, actualRepay, collateralToLiquidate, bonus);
+  }
+
+  // 内部还款逻辑
+  function _repayInternal(address borrower, uint256 amount) internal {
+    uint256 currentBorrow = _borrowBalance(borrower);
+    require(currentBorrow >= amount, "Repay exceeds debt");
+    
+    uint256 newBorrow = currentBorrow - amount;
+    totalBorrows -= amount;
+    userBorrowPrincipal[borrower] = newBorrow;
+    userBorrowIndex[borrower] = borrowIndex;
+    
+    emit Repay(borrower, amount);
+  }
+
+  // 估算清算收益
+  function estimateLiquidationProfit(uint256 repayAmount) external view returns (uint256 bonus, uint256 collateralOut) {
+    bonus = (repayAmount * liquidationBonus) / BONUS_BASE;
+    
+    uint256 borrowPrice = oracle.getPrice(address(borrowToken));
+    uint256 collateralPrice = oracle.getPrice(address(collateralToken));
+    
+    uint256 totalValue = ((repayAmount + bonus) * borrowPrice) / 1e18;
+    collateralOut = (totalValue * 1e18) / collateralPrice;
+  }
+
+  // 获取借款用户列表
+  function getBorrowers() external view returns (address[] memory) {
+    return borrowers;
+  }
+  
+  // 获取可清算账户列表
+  function getLiquidatableAccounts() external view returns (address[] memory) {
+    address[] memory result = new address[](borrowers.length);
+    uint256 count = 0;
+    
+    for (uint256 i = 0; i < borrowers.length; i++) {
+      address user = borrowers[i];
+      uint256 hf = this.healthFactor(user);
+      if (hf < liquidationThreshold && hf > 0) {
+        result[count] = user;
+        count++;
+      }
+    }
+    
+    // 调整数组大小
+    address[] memory liquidatable = new address[](count);
+    for (uint256 i = 0; i < count; i++) {
+      liquidatable[i] = result[i];
+    }
+    return liquidatable;
+  }
+  
+  // 获取用户详情
+  function getAccountInfo(address user) external view returns (
+    uint256 collateral,
+    uint256 debt,
+    uint256 healthFactor_
+  ) {
+    collateral = _underlyingFromShares(poolCoin.balanceOf(user));
+    debt = _borrowBalance(user);
+    healthFactor_ = this.healthFactor(user);
   }
 
   function deposit(uint256 amount) external {
@@ -116,6 +265,12 @@ contract LendingPool is Ownable {
     totalBorrows += amount;
     userBorrowPrincipal[msg.sender] = newBorrow;
     userBorrowIndex[msg.sender] = borrowIndex;
+    
+    // 记录借款用户
+    if (!isBorrower[msg.sender]) {
+      isBorrower[msg.sender] = true;
+      borrowers.push(msg.sender);
+    }
 
     borrowToken.safeTransfer(msg.sender, amount);
     emit Borrow(msg.sender, amount);
