@@ -4,7 +4,7 @@ Backend repository for our DeFi lending protocol project on Ethereum.
 
 ## Before You Start
 
-Please read [GIT_RULES.md](./GIT_RULES.md) first and follow it during development. Frontend integration guide: [API.md](./API.md)
+Please read [GIT_RULES.md](./GIT_RULES.md) first and follow it during development. Frontend integration guide: [FRONTEND_API.md](./docs/FRONTEND_API.md)
 
 ## Targets (PM not finalized yet)
 
