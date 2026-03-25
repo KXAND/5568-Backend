@@ -15,21 +15,25 @@ Files:
 ### Getters
 
 - `token() -> address`
+  Version: 0.0.1
   Purpose: return the AliceToken contract address.
   Inputs: none.
   Output: token contract address.
 
 - `dripAmount() -> uint256`
+  Version: 0.0.1
   Purpose: return how many tokens one successful claim gives.
   Inputs: none.
   Output: drip amount.
 
 - `cooldown() -> uint256`
+  Version: 0.0.1
   Purpose: return the minimum waiting time between two claims.
   Inputs: none.
   Output: cooldown in seconds.
 
 - `lastClaimAt(address user) -> uint256`
+  Version: 0.0.1
   Purpose: return the last claim timestamp of a user.
   Inputs: `user`: wallet address.
   Output: Unix timestamp (seconds).
@@ -37,6 +41,7 @@ Files:
 ### Public Functions
 
 - `claim()`
+  Version: 0.0.1
   Purpose: claim free Alice tokens to msg.sender if the cooldown has passed.
   Inputs: none.
   Output: none.
@@ -48,11 +53,13 @@ Files:
 ### Getters
 
 - `balanceOf(address account) -> uint256`
+  Version: 0.0.1
   Purpose: return the token balance of an account.
   Inputs: `account`: wallet address.
   Output: token balance.
 
 - `allowance(address owner, address spender) -> uint256`
+  Version: 0.0.1
   Purpose: return how many tokens `spender` is allowed to spend from `owner`.
   Inputs: `owner`: token owner address. `spender`: approved spender address.
   Output: allowance amount.
@@ -60,11 +67,13 @@ Files:
 ### Public Functions
 
 - `approve(address spender, uint256 amount) -> bool`
+  Version: 0.0.1
   Purpose: allow another address to spend the caller's tokens.
   Inputs: `spender`: approved address. `amount`: approved amount.
   Output: `true` if approval succeeds.
 
 - `transfer(address to, uint256 amount) -> bool`
+  Version: 0.0.1
   Purpose: send tokens from the caller to another address.
   Inputs: `to`: receiver address. `amount`: token amount.
   Output: `true` if transfer succeeds.
@@ -78,11 +87,13 @@ File: `contracts/PoolCoin.sol`
 ### Getters
 
 - `balanceOf(address account) -> uint256`
+  Version: 0.0.1
   Purpose: return how many PoolCoin shares an account owns.
   Inputs: `account`: wallet address.
   Output: share balance.
 
 - `totalSupply() -> uint256`
+  Version: 0.0.1
   Purpose: return current total supply of receipt shares.
   Inputs: none.
   Output: total share supply.
@@ -90,11 +101,13 @@ File: `contracts/PoolCoin.sol`
 ### Public Functions
 
 - `transfer(address to, uint256 amount) -> bool`
+  Version: 0.0.1
   Purpose: transfer PoolCoin shares.
   Inputs: `to`: receiver address. `amount`: share amount.
   Output: `true` if transfer succeeds.
 
 - `approve(address spender, uint256 amount) -> bool`
+  Version: 0.0.1
   Purpose: approve PoolCoin share spending.
   Inputs: `spender`: approved address. `amount`: approved amount.
   Output: `true` if approval succeeds.
@@ -108,6 +121,7 @@ File: `contracts/Oracle.sol`
 ### Getters
 
 - `getPrice(address asset) -> uint256`
+  Version: 0.0.1
   Purpose: return the current price of an asset.
   Inputs: `asset`: token address.
   Output: price scaled by `1e18`.
@@ -125,21 +139,25 @@ File: `contracts/InterestRate.sol`
 ### Getters
 
 - `baseRate() -> uint256`
+  Version: 0.0.1
   Purpose: return the base borrow rate.
   Inputs: none.
   Output: rate per block, scaled by `1e18`.
 
 - `slope1() -> uint256`
+  Version: 0.0.1
   Purpose: return the interest slope below kink.
   Inputs: none.
   Output: rate per block, scaled by `1e18`.
 
 - `slope2() -> uint256`
+  Version: 0.0.1
   Purpose: return the interest slope above kink.
   Inputs: none.
   Output: rate per block, scaled by `1e18`.
 
 - `kink() -> uint256`
+  Version: 0.0.1
   Purpose: return the utilization threshold where the slope changes.
   Inputs: none.
   Output: utilization ratio, scaled by `1e18`.
@@ -147,6 +165,7 @@ File: `contracts/InterestRate.sol`
 ### Public Functions
 
 - `getBorrowRate(uint256 utilization) -> uint256`
+  Version: 0.0.1
   Purpose: calculate the borrow rate for a utilization value.
   Inputs: `utilization`: utilization ratio, scaled by `1e18`.
   Output: borrow rate per block, scaled by `1e18`.
@@ -160,56 +179,67 @@ File: `contracts/LendingPool.sol`
 ### Getters
 
 - `collateralToken() -> address`
+  Version: 0.0.1
   Purpose: return the collateral token contract address.
   Inputs: none.
   Output: token contract address.
 
 - `borrowToken() -> address`
+  Version: 0.0.1
   Purpose: return the borrow token contract address.
   Inputs: none.
   Output: token contract address.
 
 - `poolCoin() -> address`
+  Version: 0.0.1
   Purpose: return the PoolCoin contract address.
   Inputs: none.
   Output: token contract address.
 
 - `ltv() -> uint256`
+  Version: 0.0.1
   Purpose: return the current loan-to-value limit.
   Inputs: none.
   Output: LTV ratio, scaled by `1e18`.
 
 - `totalBorrows() -> uint256`
+  Version: 0.0.1
   Purpose: return total outstanding debt in the pool.
   Inputs: none.
   Output: total debt amount.
 
 - `borrowIndex() -> uint256`
+  Version: 0.0.1
   Purpose: return the borrow-side interest index.
   Inputs: none.
   Output: index, scaled by `1e18`.
 
 - `liquidityIndex() -> uint256`
+  Version: 0.0.1
   Purpose: return the supply-side interest index.
   Inputs: none.
   Output: index, scaled by `1e18`.
 
 - `getUtilization() -> uint256`
+  Version: 0.0.1
   Purpose: return current pool utilization.
   Inputs: none.
   Output: utilization ratio, scaled by `1e18`.
 
 - `healthFactor(address user) -> uint256`
+  Version: 0.0.1
   Purpose: return the health factor of a user.
   Inputs: `user`: wallet address.
   Output: health factor. `>= 1e18` means safe.
 
 - `estimateLiquidationProfit(uint256 repayAmount) -> (uint256 bonus, uint256 collateralOut)`
+  Version: 0.0.1
   Purpose: estimate liquidation reward for a given repay amount.
   Inputs: `repayAmount`: borrow token amount to repay.
   Output: `bonus`: bonus portion. `collateralOut`: estimated collateral received.
 
 - `getAccountInfo(address user) -> (uint256 collateral, uint256 debt, uint256 healthFactor_)`
+  Version: 0.0.1
   Purpose: return a user's collateral, debt, and health factor in one call.
   Inputs: `user`: wallet address.
   Output: `collateral`: collateral amount. `debt`: debt amount. `healthFactor_`: health factor.
@@ -217,26 +247,31 @@ File: `contracts/LendingPool.sol`
 ### Public Functions
 
 - `deposit(uint256 amount)`
+  Version: 0.0.1
   Purpose: deposit collateral and mint PoolCoin shares.
   Inputs: `amount`: collateral token amount.
   Output: none.
 
 - `withdraw(uint256 amount)`
+  Version: 0.0.1
   Purpose: withdraw collateral and burn PoolCoin shares.
   Inputs: `amount`: collateral token amount.
   Output: none.
 
 - `borrow(uint256 amount)`
+  Version: 0.0.1
   Purpose: borrow borrowToken from the pool.
   Inputs: `amount`: borrow token amount.
   Output: none.
 
 - `repay(uint256 amount)`
+  Version: 0.0.1
   Purpose: repay borrowToken debt.
   Inputs: `amount`: borrow token amount.
   Output: none.
 
 - `liquidate(address borrower, uint256 repayAmount)`
+  Version: 0.0.1
   Purpose: repay a borrower's debt and receive collateral plus bonus if the position is unhealthy.
   Inputs: `borrower`: target borrower address. `repayAmount`: amount of borrow token to repay. `0` means repay full debt.
   Output: none.
