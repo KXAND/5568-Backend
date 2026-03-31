@@ -13,7 +13,7 @@
     "viem": "^2.47.0"
   },
   "scripts": {
-    "node": "hardhat node",
+    "node": "hardhat node --hostname 127.0.0.1 --port 8545 --mnemonic \"test test test test test test test test test test test junk\"",
     "play": "hardhat run --network hardhatMainnet",
     "play:local": "hardhat run --network localhost",
     "test": "hardhat test",
@@ -21,3 +21,4 @@
     "test:fast": "hardhat test --no-compile"
   }
 }
+
