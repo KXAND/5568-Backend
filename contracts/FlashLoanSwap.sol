@@ -1,0 +1,157 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.28;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+/**
+ * @title FlashLoanSwap
+ * @dev 简单的代币兑换合约，支持AliceToken和BobToken之间的交换
+ */
+contract FlashLoanSwap {
+    using SafeERC20 for IERC20;
+
+    IERC20 public aliceToken;
+    IERC20 public bobToken;
+    
+    // 交换比例: aliceAmount / bobAmount
+    // 例如：如果 exchangeRate = 1, 则 1 Alice = 1 Bob
+    uint256 public exchangeRate = 1e18; // 默认1:1，使用18位精度
+    
+    address public owner;
+    
+    uint256 public totalAliceSwapped;
+    uint256 public totalBobSwapped;
+    
+    event SwapAliceToBob(address indexed user, uint256 aliceAmount, uint256 bobAmount);
+    event SwapBobToAlice(address indexed user, uint256 bobAmount, uint256 aliceAmount);
+    event ExchangeRateUpdated(uint256 newRate);
+    event LiquidityAdded(address indexed token, uint256 amount);
+    event LiquidityRemoved(address indexed token, uint256 amount);
+
+    constructor(address _aliceToken, address _bobToken) {
+        aliceToken = IERC20(_aliceToken);
+        bobToken = IERC20(_bobToken);
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner");
+        _;
+    }
+
+    /**
+     * @dev 添加流动性
+     */
+    function addLiquidity(address token, uint256 amount) external onlyOwner {
+        require(token == address(aliceToken) || token == address(bobToken), "Invalid token");
+        require(amount > 0, "Amount must be > 0");
+        
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        emit LiquidityAdded(token, amount);
+    }
+
+    /**
+     * @dev 移除流动性
+     */
+    function removeLiquidity(address token, uint256 amount) external onlyOwner {
+        require(token == address(aliceToken) || token == address(bobToken), "Invalid token");
+        require(amount > 0, "Amount must be > 0");
+        require(IERC20(token).balanceOf(address(this)) >= amount, "Insufficient liquidity");
+        
+        IERC20(token).safeTransfer(msg.sender, amount);
+        emit LiquidityRemoved(token, amount);
+    }
+
+    /**
+     * @dev 设置交换比例
+     * @param _exchangeRate 新的交换率 (1e18为1:1)
+     */
+    function setExchangeRate(uint256 _exchangeRate) external onlyOwner {
+        require(_exchangeRate > 0, "Rate must be > 0");
+        exchangeRate = _exchangeRate;
+        emit ExchangeRateUpdated(_exchangeRate);
+    }
+
+    /**
+     * @dev Alice换Bob
+     * @param aliceAmount 用户输入的Alice数量
+     */
+    function swapAliceToBob(uint256 aliceAmount) external {
+        require(aliceAmount > 0, "Amount must be > 0");
+        
+        // 计算能换得的Bob数量
+        uint256 bobAmount = (aliceAmount * 1e18) / exchangeRate;
+        
+        // 检查池子是否有足够的Bob
+        require(bobToken.balanceOf(address(this)) >= bobAmount, "Insufficient liquidity");
+        
+        // 从用户转入Alice
+        aliceToken.safeTransferFrom(msg.sender, address(this), aliceAmount);
+        
+        // 转出Bob给用户
+        bobToken.safeTransfer(msg.sender, bobAmount);
+        
+        // 记录统计
+        totalAliceSwapped += aliceAmount;
+        totalBobSwapped += bobAmount;
+        
+        emit SwapAliceToBob(msg.sender, aliceAmount, bobAmount);
+    }
+
+    /**
+     * @dev Bob换Alice
+     * @param bobAmount 用户输入的Bob数量
+     */
+    function swapBobToAlice(uint256 bobAmount) external {
+        require(bobAmount > 0, "Amount must be > 0");
+        
+        // 计算能换得的Alice数量
+        uint256 aliceAmount = (bobAmount * exchangeRate) / 1e18;
+        
+        // 检查池子是否有足够的Alice
+        require(aliceToken.balanceOf(address(this)) >= aliceAmount, "Insufficient liquidity");
+        
+        // 从用户转入Bob
+        bobToken.safeTransferFrom(msg.sender, address(this), bobAmount);
+        
+        // 转出Alice给用户
+        aliceToken.safeTransfer(msg.sender, aliceAmount);
+        
+        // 记录统计
+        totalBobSwapped += bobAmount;
+        totalAliceSwapped += aliceAmount;
+        
+        emit SwapBobToAlice(msg.sender, bobAmount, aliceAmount);
+    }
+
+    /**
+     * @dev 获取Alice换Bob的输出数量
+     */
+    function getAliceToBobAmount(uint256 aliceAmount) external view returns (uint256) {
+        return (aliceAmount * 1e18) / exchangeRate;
+    }
+
+    /**
+     * @dev 获取Bob换Alice的输出数量
+     */
+    function getBobToAliceAmount(uint256 bobAmount) external view returns (uint256) {
+        return (bobAmount * exchangeRate) / 1e18;
+    }
+
+    /**
+     * @dev 获取池子状态
+     */
+    function getPoolStatus() external view returns (uint256 aliceBalance, uint256 bobBalance) {
+        aliceBalance = aliceToken.balanceOf(address(this));
+        bobBalance = bobToken.balanceOf(address(this));
+    }
+
+    /**
+     * @dev 获取统计信息
+     */
+    function getStats() external view returns (uint256 aliceTotal, uint256 bobTotal) {
+        aliceTotal = totalAliceSwapped;
+        bobTotal = totalBobSwapped;
+    }
+}
