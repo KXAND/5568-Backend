@@ -1,67 +1,60 @@
-// scripts/play.ts
 import { network } from "hardhat";
-import { deploy } from "./deploy.js"
+import { deploy } from "./deploy.js";
 
 async function main() {
   const { viem } = await network.connect({ network: "localhost" });
-  const publicClient = await viem.getPublicClient();
-  const [A, B] = await viem.getWalletClients();
-  const a = A.account.address;
+  const [A] = await viem.getWalletClients();
+  const account = A.account.address;
 
-  // Fill these with your deployed addresses
-  const [ORACLE, , ALICE_FAUCET, , BOB_FAUCET, , POOL] = await deploy()
+  const deployed = await deploy();
 
+  const oracle = await viem.getContractAt("SimpleOracle", deployed.oracle);
+  const aliceFaucet = await viem.getContractAt("AliceFaucet", deployed.aliceFaucet);
+  const bobFaucet = await viem.getContractAt("BobFaucet", deployed.bobFaucet);
+  const aliceToken = await viem.getContractAt("AliceToken", deployed.aliceToken);
+  const bobToken = await viem.getContractAt("BobToken", deployed.bobToken);
+  const pool = await viem.getContractAt("LendingPool", deployed.pool);
 
-  const oracle = await viem.getContractAt("SimpleOracle", ORACLE);
-  const aliceFaucet = await viem.getContractAt("AliceFaucet", ALICE_FAUCET);
-  const bobFaucet = await viem.getContractAt("BobFaucet", BOB_FAUCET);
-  const pool = await viem.getContractAt("LendingPool", POOL);
+  await oracle.write.setPrice([aliceToken.address, 1n * 10n ** 18n], { account });
+  await oracle.write.setPrice([bobToken.address, 2n * 10n ** 18n], { account });
 
-  const aliceToken = await viem.getContractAt(
-    "AliceToken",
-    await aliceFaucet.read.token()
-  );
-  const bobToken = await viem.getContractAt(
-    "BobToken",
-    await bobFaucet.read.token()
-  );
+  await aliceFaucet.write.claim({ account });
+  await bobFaucet.write.claim({ account });
 
-  // Set oracle prices (1e18 scale)
-  await oracle.write.setPrice([bobToken.address, 2n * 10n ** 18n], { account: a });
-  await oracle.write.setPrice([aliceToken.address, 1n * 10n ** 18n], { account: a });
+  const supplyAmount = 10_000n * 10n ** 18n;
+  await aliceToken.write.approve([pool.address, supplyAmount], { account });
+  await pool.write.deposit([aliceToken.address, supplyAmount], { account });
 
-  // Claim faucet tokens for A,B; drip: 100_000
-  await bobFaucet.write.claim({ account: a });
-  await aliceFaucet.write.claim({ account: a });
+  const nextDebtVaultId = await pool.read.nextDebtVaultId();
+  await pool.write.openDebtVault({ account });
 
-  // Provide borrow liquidity to pool (A transfers AliceToken to pool)
-  const liquidity = 5_000n * 10n ** 18n;
-  await aliceToken.write.transfer([pool.address, liquidity], { account: a });
+  const collateralAmount = 1_000n * 10n ** 18n;
+  await bobToken.write.approve([pool.address, collateralAmount], { account });
+  await pool.write.deposit([bobToken.address, collateralAmount], { account });
+  await pool.write.depositCollateral([nextDebtVaultId, bobToken.address, collateralAmount], { account });
 
-  // Deposit collateral (BobToken) 
-  const depositAmount = 1_000n * 10n ** 18n;
-  await bobToken.write.approve([pool.address, depositAmount], { account: a });
-  await pool.write.deposit([depositAmount], { account: a });
+  const borrowAmount = 1_000n * 10n ** 18n;
+  await pool.write.borrow([nextDebtVaultId, aliceToken.address, borrowAmount], { account });
 
-  // Borrow AliceToken: 1_000 BOBB = 2000ALC, LTV= 0.75, maxBrw = 1500
-  const borrowAmount = 1000n * 10n ** 18n;
-  await pool.write.borrow([borrowAmount], { account: a });
-
-  // Repay part of the debt
   const repayAmount = 200n * 10n ** 18n;
-  await aliceToken.write.approve([pool.address, repayAmount], { account: a });
-  await pool.write.repay([repayAmount], { account: a });
+  await aliceToken.write.approve([pool.address, repayAmount], { account });
+  await pool.write.repay([nextDebtVaultId, aliceToken.address, repayAmount], { account });
 
-  // Check balances
-  const aAlice = await aliceToken.read.balanceOf([a]);
-  const aBob = await bobToken.read.balanceOf([a]);
-  const hf = await pool.read.healthFactor([a]);
+  const aliceBalance = await aliceToken.read.balanceOf([account]);
+  const bobBalance = await bobToken.read.balanceOf([account]);
+  const hf = await pool.read.healthFactor([nextDebtVaultId]);
+  const aliceCustodiedShares = await pool.read.getUserCustodiedShares([account, aliceToken.address]);
+  const aliceDepositedAmount = await pool.read.getDebtVaultCollateralAssetAmount([nextDebtVaultId, aliceToken.address]);
+  const bobLockedShares = await pool.read.getUserLockedShares([account, bobToken.address]);
+  const debtBalance = await pool.read.getDebtVaultDebtAmount([nextDebtVaultId, aliceToken.address]);
 
-  console.log("A AliceToken:", aAlice.toString());
-  console.log("A BobToken:", aBob.toString());
-  console.log("HealthFactor:", hf.toString());
-
-  await publicClient.getBlockNumber(); // keep linter quiet if needed
+  console.log("ALC balance:", aliceBalance.toString());
+  console.log("BOB balance:", bobBalance.toString());
+  console.log("ALC custodied shares:", aliceCustodiedShares.toString());
+  console.log("ALC deposited asset amount:", aliceDepositedAmount.toString());
+  console.log("BOB locked shares:", bobLockedShares.toString());
+  console.log("Debt balance:", debtBalance.toString());
+  console.log("HF:", hf.toString());
 }
 
 main().catch((e) => {

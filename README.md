@@ -10,12 +10,12 @@ Please read [GIT_RULES.md](./GIT_RULES.md) first and follow it during developmen
 
 Basic:
 
-- [ ] A lending pool where users can **supply**, **withdraw**, **borrow**, and **repay**
-- [ ] Over-collateralization logic
-- [ ] Interest rate model (kinked)
-  - [ ] Dynamic interest rate model based on utilization rate
-  - [ ] Accrue interest per block (lenders and borrowers)
-- [ ] Oracle (simple fixed-price)
+- [x] A lending pool where users can **supply**, **withdraw**, **borrow**, and **repay**
+- [x] Over-collateralization logic
+- [x] Interest rate model (kinked)
+  - [x] Dynamic interest rate model based on utilization rate
+  - [x] Accrue interest per block (lenders and borrowers)
+- [] Oracle (simple fixed-price)
 
 Bonus:
 
