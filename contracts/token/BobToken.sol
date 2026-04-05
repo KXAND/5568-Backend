@@ -6,37 +6,46 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title BOB: The volatile asset
 contract BobToken is ERC20, Ownable {
-  constructor(address initialOwner) ERC20("Bob Token", "BOB") Ownable(initialOwner) {}
+    constructor(
+        address initialOwner
+    ) ERC20("Bob Token", "BOB") Ownable(initialOwner) {}
 
-  function mint(address to, uint256 amount) external onlyOwner {
-    _mint(to, amount);
-  }
+    function mint(address to, uint256 amount) external onlyOwner {
+        _mint(to, amount);
+    }
 }
 
 /// @title A faucet of BOB
 /// @notice Allowing user get some free BOBs
 contract BobFaucet is Ownable {
-  BobToken public immutable token;
-  uint256 public immutable dripAmount;
-  uint256 public immutable cooldown;
+    BobToken public immutable token;
+    uint256 public immutable dripAmount;
+    uint256 public immutable cooldown;
 
-  mapping(address => uint256) public lastClaimAt;
+    mapping(address => uint256) public lastClaimAt;
 
-  constructor(uint256 initialSupply, uint256 _dripAmount, uint256 _cooldown) Ownable(msg.sender) {
-    token = new BobToken(address(this));
-    token.mint(address(this), initialSupply);
-    dripAmount = _dripAmount;
-    cooldown = _cooldown;
-  }
+    constructor(
+        uint256 initialSupply,
+        uint256 _dripAmount,
+        uint256 _cooldown
+    ) Ownable(msg.sender) {
+        token = new BobToken(address(this));
+        token.mint(address(this), initialSupply);
+        dripAmount = _dripAmount;
+        cooldown = _cooldown;
+    }
 
-  function claim() external {
-    uint256 last = lastClaimAt[msg.sender];
-    require(block.timestamp - last >= cooldown, "Faucet: cooldown");
-    lastClaimAt[msg.sender] = block.timestamp;
-    require(token.transfer(msg.sender, dripAmount), "Faucet: transfer failed");
-  }
+    function claim() external {
+        uint256 last = lastClaimAt[msg.sender];
+        require(block.timestamp - last >= cooldown, "Faucet: cooldown");
+        lastClaimAt[msg.sender] = block.timestamp;
+        require(
+            token.transfer(msg.sender, dripAmount),
+            "Faucet: transfer failed"
+        );
+    }
 
-  function refill(uint256 amount) external onlyOwner {
-    token.mint(address(this), amount);
-  }
+    function refill(uint256 amount) external onlyOwner {
+        token.mint(address(this), amount);
+    }
 }
