@@ -26,6 +26,7 @@ contract LendingPool is Ownable {
 
     SimpleOracle public oracle;
     uint256 public liquidationBonus = 500;
+    uint256 public closeFactor = 5000;
     uint256 public nextDebtVaultId = 1;
 
     mapping(address => LendingPoolTypes.Reserve) public reserves;
@@ -158,6 +159,11 @@ contract LendingPool is Ownable {
         emit SetLiquidationBonus(_bonus);
     }
 
+    function setCloseFactor(uint256 _closeFactor) external onlyOwner {
+        require(_closeFactor <= BPS, "closeFactor too high");
+        closeFactor = _closeFactor;
+    }
+
     function liquidate(
         uint256 debtVaultId,
         address debtAsset,
@@ -180,6 +186,7 @@ contract LendingPool is Ownable {
                 collateralAsset: collateralAsset,
                 repayAmount: repayAmount,
                 liquidationBonus: liquidationBonus,
+                closeFactor: closeFactor,
                 bps: BPS,
                 ray: RAY,
                 liquidator: msg.sender

@@ -56,8 +56,9 @@ library LiquidationLogic {
             debtReserve
         );
         require(principal > 0, "LendingPool: no debt");
-        actualRepayAmount = params.repayAmount > principal
-            ? principal
+        uint256 maxRepayAmount = (principal * params.closeFactor) / params.bps;
+        actualRepayAmount = params.repayAmount > maxRepayAmount
+            ? maxRepayAmount
             : params.repayAmount;
 
         // liquidator actual earn
