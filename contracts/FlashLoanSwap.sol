@@ -14,9 +14,9 @@ contract FlashLoanSwap {
     IERC20 public aliceToken;
     IERC20 public bobToken;
     
-    // 交换比例: aliceAmount / bobAmount
-    // 例如：如果 exchangeRate = 1, 则 1 Alice = 1 Bob
-    uint256 public exchangeRate = 1e18; // 默认1:1，使用18位精度
+    // 交换比例: bobAmount / aliceAmount
+    // 例如：如果 exchangeRate = 1.5e18, 则 1 Bob = 1.5 Alice
+    uint256 public exchangeRate = 1.5e18; // 1:1.5比例，1个Bob换1.5个Alice
     
     address public owner;
     

@@ -1,4 +1,3 @@
-// scripts/deploy.ts
 import { network } from "hardhat";
 
 export async function deploy() {
@@ -11,11 +10,10 @@ export async function deploy() {
   });
 
   // 2) Interest rate model (kinked)
-  // Rates are per-block, scaled by 1e18
   const baseRate = 0n;
-  const slope1 = 5_000_000_000_000_000n; // 0.005
-  const slope2 = 20_000_000_000_000_000n; // 0.02
-  const kink = 800_000_000_000_000_000n; // 0.8
+  const slope1 = 5_000_000_000_000_000n;
+  const slope2 = 20_000_000_000_000_000n;
+  const kink = 800_000_000_000_000_000n;
   const irm = await viem.deployContract(
     "InterestRateModel",
     [baseRate, slope1, slope2, kink],
@@ -25,7 +23,7 @@ export async function deploy() {
   // 3) Faucets + tokens
   const aliceInitial = 1_000_000n * 10n ** 18n;
   const aliceDrip = 100_000n * 10n ** 18n;
-  const aliceCooldown = 60n;
+  const aliceCooldown = 1n; // 1秒方便测试
   const aliceFaucet = await viem.deployContract(
     "AliceFaucet",
     [aliceInitial, aliceDrip, aliceCooldown],
@@ -38,7 +36,7 @@ export async function deploy() {
 
   const bobInitial = 1_000_000n * 10n ** 18n;
   const bobDrip = 100_000n * 10n ** 18n;
-  const bobCooldown = 60n;
+  const bobCooldown = 1n;
   const bobFaucet = await viem.deployContract(
     "BobFaucet",
     [bobInitial, bobDrip, bobCooldown],
@@ -50,7 +48,7 @@ export async function deploy() {
   );
 
   // 4) Lending pool
-  const ltv = 750_000_000_000_000_000n; // 0.75
+  const ltv = 750_000_000_000_000_000n;
   const pool = await viem.deployContract(
     "LendingPool",
     [
@@ -65,6 +63,34 @@ export async function deploy() {
     { client: { wallet: deployer } }
   );
 
+  // 5) FlashLoanPool
+  const flashPool = await viem.deployContract(
+    "FlashLoanPool",
+    [aliceToken.address, bobToken.address],
+    { client: { wallet: deployer } }
+  );
+
+  // 6) FlashLoanSwap
+  const swap = await viem.deployContract(
+    "FlashLoanSwap",
+    [aliceToken.address, bobToken.address],
+    { client: { wallet: deployer } }
+  );
+
+  // 7) FlashLoanBot
+  const testBot = await viem.deployContract(
+    "FlashLoanBot",
+    [flashPool.address, pool.address, swap.address],
+    { client: { wallet: deployer } }
+  );
+
+  // 8) LiquidationBot (暂时注释掉，因为合约不存在)
+  // const liquidationBot = await viem.deployContract(
+  //   "LiquidationBot",
+  //   [flashPool.address, pool.address, aliceToken.address, bobToken.address, swap.address],
+  //   { client: { wallet: deployer } }
+  // );
+
   console.log("Oracle:", oracle.address);
   console.log("InterestRateModel:", irm.address);
   console.log("AliceFaucet:", aliceFaucet.address);
@@ -72,11 +98,25 @@ export async function deploy() {
   console.log("BobFaucet:", bobFaucet.address);
   console.log("BobToken:", bobToken.address);
   console.log("LendingPool:", pool.address);
+  console.log("FlashLoanPool:", flashPool.address);
+  console.log("FlashLoanBot:", testBot.address);
+  console.log("FlashLoanSwap:", swap.address);
+  // console.log("LiquidationBot:", liquidationBot.address);
 
-  return [oracle.address, irm.address,
-    aliceFaucet.address, aliceToken.address,
-    bobFaucet.address, bobToken.address,
-    pool.address]
+  // 返回所有地址
+  return [
+    oracle.address,
+    irm.address,
+    aliceFaucet.address,
+    aliceToken.address,
+    bobFaucet.address,
+    bobToken.address,
+    pool.address,
+    flashPool.address,
+    testBot.address,
+    swap.address
+    // liquidationBot.address
+  ];
 }
 
 // deploy().catch((e) => {

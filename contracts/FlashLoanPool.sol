@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -11,7 +10,7 @@ contract FlashLoanPool is Ownable {
     IERC20 public aliceToken;
     IERC20 public bobToken;
     
-    uint256 public feeRate = 0;  // 0% 手续费，简化测试
+    uint256 public feeRate = 1;  // 0.01% 手续费
     uint256 public constant FEE_BASE = 10000;
     
     event FlashLoan(
