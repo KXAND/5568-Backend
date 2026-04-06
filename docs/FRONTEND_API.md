@@ -249,3 +249,165 @@ File: `contracts/LendingPool.sol`
 - `borrow` does not require ERC20 approval.
 - PoolCoin shares are handled internally when users deposit and withdraw.
 - Owner-only functions such as `setLtv`, `setOracle`, and `setInterestRateModel` are intentionally not listed here as normal frontend actions.
+
+---
+
+## FlashLoanPool
+
+File: `contracts/FlashLoanPool.sol`
+
+### Getters
+
+- `aliceToken() -> address`
+  Purpose: return the supported Alice token address.
+  Inputs: none.
+  Output: token contract address.
+
+- `bobToken() -> address`
+  Purpose: return the supported Bob token address.
+  Inputs: none.
+  Output: token contract address.
+
+- `feeRate() -> uint256`
+  Purpose: return current flash loan fee rate.
+  Inputs: none.
+  Output: fee in basis points (`1 = 0.01%`).
+
+- `FEE_BASE() -> uint256`
+  Purpose: return fee denominator.
+  Inputs: none.
+  Output: constant value, currently `10000`.
+
+- `getBalance(address token) -> uint256`
+  Purpose: query token liquidity in flash pool.
+  Inputs: `token`: Alice or Bob token address.
+  Output: current token balance in pool.
+
+### Public Functions
+
+- `deposit(address token, uint256 amount)`
+  Purpose: add Alice or Bob liquidity into flash pool.
+  Inputs: `token`: token address. `amount`: deposit amount.
+  Output: none.
+
+- `flashLoan(address token, uint256 amount, address target, bytes data)`
+  Purpose: execute a flash loan and callback.
+  Inputs: `token`: borrowed token. `amount`: borrow amount. `target`: receiver/callback contract. `data`: callback payload.
+  Output: none.
+
+### Frontend Notes
+
+- `deposit` requires `token.approve(flashPoolAddress, amount)` first.
+- `withdraw` and `setFeeRate` are owner-only and are not normal frontend user actions.
+- `flashLoan` should normally be triggered through a bot or strategy contract that implements callback logic.
+
+---
+
+## FlashLoanSwap
+
+File: `contracts/FlashLoanSwap.sol`
+
+### Getters
+
+- `aliceToken() -> address`
+  Purpose: return Alice token address used by swap pool.
+  Inputs: none.
+  Output: token contract address.
+
+- `bobToken() -> address`
+  Purpose: return Bob token address used by swap pool.
+  Inputs: none.
+  Output: token contract address.
+
+- `exchangeRate() -> uint256`
+  Purpose: return current swap rate.
+  Inputs: none.
+  Output: rate scaled by `1e18`.
+
+- `owner() -> address`
+  Purpose: return swap owner address.
+  Inputs: none.
+  Output: owner wallet address.
+
+- `totalAliceSwapped() -> uint256`
+  Purpose: return cumulative Alice amount swapped.
+  Inputs: none.
+  Output: total amount.
+
+- `totalBobSwapped() -> uint256`
+  Purpose: return cumulative Bob amount swapped.
+  Inputs: none.
+  Output: total amount.
+
+- `getAliceToBobAmount(uint256 aliceAmount) -> uint256`
+  Purpose: quote Bob output for a given Alice input.
+  Inputs: `aliceAmount`: Alice input amount.
+  Output: Bob output amount.
+
+- `getBobToAliceAmount(uint256 bobAmount) -> uint256`
+  Purpose: quote Alice output for a given Bob input.
+  Inputs: `bobAmount`: Bob input amount.
+  Output: Alice output amount.
+
+- `getPoolStatus() -> (uint256 aliceBalance, uint256 bobBalance)`
+  Purpose: return current swap pool balances.
+  Inputs: none.
+  Output: Alice and Bob balances.
+
+- `getStats() -> (uint256 aliceTotal, uint256 bobTotal)`
+  Purpose: return accumulated swap stats.
+  Inputs: none.
+  Output: total Alice swapped and total Bob swapped.
+
+### Public Functions
+
+- `swapAliceToBob(uint256 aliceAmount)`
+  Purpose: swap Alice to Bob using current exchange rate.
+  Inputs: `aliceAmount`: Alice input amount.
+  Output: none.
+
+- `swapBobToAlice(uint256 bobAmount)`
+  Purpose: swap Bob to Alice using current exchange rate.
+  Inputs: `bobAmount`: Bob input amount.
+  Output: none.
+
+### Frontend Notes
+
+- `swapAliceToBob` requires `aliceToken.approve(swapAddress, aliceAmount)` first.
+- `swapBobToAlice` requires `bobToken.approve(swapAddress, bobAmount)` first.
+- `addLiquidity`, `removeLiquidity`, and `setExchangeRate` are owner-only and are not normal frontend user actions.
+
+---
+
+## FlashLoanBot
+
+File: `contracts/FlashLoanBot.sol`
+
+### Getters
+
+- `flashPool() -> address`
+  Purpose: return linked flash pool contract address.
+  Inputs: none.
+  Output: contract address.
+
+- `lendingPool() -> address`
+  Purpose: return linked lending pool contract address.
+  Inputs: none.
+  Output: contract address.
+
+- `swap() -> address`
+  Purpose: return linked swap contract address.
+  Inputs: none.
+  Output: contract address.
+
+### Public Functions
+
+- `borrow(address token, uint256 amount, address borrower)`
+  Purpose: trigger bot strategy to take flash loan and liquidate target borrower.
+  Inputs: `token`: flash-loaned token. `amount`: flash borrow amount. `borrower`: target borrower to liquidate.
+  Output: none.
+
+### Frontend Notes
+
+- This contract is strategy-oriented; typical end users do not call it directly in a normal lending UI.
+- If exposed in frontend, treat it as an advanced/operator action and validate target borrower health before calling.
