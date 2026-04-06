@@ -358,6 +358,12 @@ File: `contracts/LendingPool.sol`
   Inputs: `asset`: reserve asset. `amount`: asset amount.
   Output: none.
 
+- `setCloseFactor(uint256 _closeFactor)`
+  Version: 0.0.1
+  Purpose: update close factor.
+  Inputs: `_closeFactor`: new closefactor, not allowed bigger than BPS.
+  Output: none.
+
 #### Deposit & Withdraw
 
 - `deposit(address asset, uint256 amount)`
