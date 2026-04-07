@@ -425,7 +425,7 @@ File: `contracts/LendingPool.sol`
 
 ## FlashLoanPool
 
-File: `contracts/FlashLoanPool.sol`
+File: `contracts/Flashloan/FlashLoanPool.sol`
 
 ### Getters
 
@@ -485,7 +485,7 @@ File: `contracts/FlashLoanPool.sol`
 
 ## IFlashLoanReceiver
 
-File: `contracts/FlashLoanPool.sol`
+File: `contracts/Flashloan/FlashLoanPool.sol`
 
 ### Public Functions
 
@@ -498,7 +498,7 @@ File: `contracts/FlashLoanPool.sol`
 
 ## FlashLoanBot
 
-File: `contracts/FlashLoanBot.sol`
+File: `contracts/Flashloan/FlashLoanBot.sol`
 
 ### Getters
 
@@ -533,7 +533,7 @@ File: `contracts/FlashLoanBot.sol`
 
 ## FlashLoanSwap
 
-File: `contracts/FlashLoanSwap.sol`
+File: `contracts/Flashloan/FlashLoanSwap.sol`
 
 ### Getters
 

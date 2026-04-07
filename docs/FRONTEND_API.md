@@ -254,7 +254,7 @@ File: `contracts/LendingPool.sol`
 
 ## FlashLoanPool
 
-File: `contracts/FlashLoanPool.sol`
+File: `contracts/Flashloan/FlashLoanPool.sol`
 
 ### Getters
 
@@ -305,7 +305,7 @@ File: `contracts/FlashLoanPool.sol`
 
 ## FlashLoanSwap
 
-File: `contracts/FlashLoanSwap.sol`
+File: `contracts/Flashloan/FlashLoanSwap.sol`
 
 ### Getters
 
@@ -381,7 +381,7 @@ File: `contracts/FlashLoanSwap.sol`
 
 ## FlashLoanBot
 
-File: `contracts/FlashLoanBot.sol`
+File: `contracts/Flashloan/FlashLoanBot.sol`
 
 ### Getters
 
