@@ -1,15 +1,51 @@
+import { fileURLToPath } from "node:url";
 import { network } from "hardhat";
+
+const LIBRARIES = {
+  reserve: "project/contracts/logic/ReserveLogic.sol:ReserveLogic",
+  debtVault: "project/contracts/logic/DebtVaultLogic.sol:DebtVaultLogic",
+  config: "project/contracts/logic/ConfigLogic.sol:ConfigLogic",
+  supply: "project/contracts/logic/DepositLogic.sol:DepositLogic",
+  borrow: "project/contracts/logic/BorrowLogic.sol:BorrowLogic",
+} as const;
 
 export async function deploy() {
   const { viem } = await network.connect({ network: "localhost" });
   const [deployer] = await viem.getWalletClients();
 
-  // 1) Oracle
+  const reserveLogic = await viem.deployContract("ReserveLogic", [], {
+    client: { wallet: deployer },
+  });
+
+  const debtVaultLogic = await viem.deployContract("DebtVaultLogic", [], {
+    client: { wallet: deployer },
+    libraries: {
+      [LIBRARIES.reserve]: reserveLogic.address,
+    },
+  });
+
+  const configLogic = await viem.deployContract("ConfigLogic", [], {
+    client: { wallet: deployer },
+  });
+
+  const depositLogic = await viem.deployContract("DepositLogic", [], {
+    client: { wallet: deployer },
+    libraries: {
+      [LIBRARIES.reserve]: reserveLogic.address,
+    },
+  });
+
+  const borrowLogic = await viem.deployContract("BorrowLogic", [], {
+    client: { wallet: deployer },
+    libraries: {
+      [LIBRARIES.reserve]: reserveLogic.address,
+    },
+  });
+
   const oracle = await viem.deployContract("SimpleOracle", [], {
     client: { wallet: deployer },
   });
 
-  // 2) Interest rate model (kinked)
   const baseRate = 0n;
   const slope1 = 5_000_000_000_000_000n;
   const slope2 = 20_000_000_000_000_000n;
@@ -20,77 +56,51 @@ export async function deploy() {
     { client: { wallet: deployer } }
   );
 
-  // 3) Faucets + tokens
   const aliceInitial = 1_000_000n * 10n ** 18n;
   const aliceDrip = 100_000n * 10n ** 18n;
-  const aliceCooldown = 1n; // 1秒方便测试
+  const aliceCooldown = 60n;
   const aliceFaucet = await viem.deployContract(
     "AliceFaucet",
     [aliceInitial, aliceDrip, aliceCooldown],
     { client: { wallet: deployer } }
   );
-  const aliceToken = await viem.getContractAt(
-    "AliceToken",
-    await aliceFaucet.read.token()
-  );
+  const aliceToken = await viem.getContractAt("AliceToken", await aliceFaucet.read.token());
 
   const bobInitial = 1_000_000n * 10n ** 18n;
   const bobDrip = 100_000n * 10n ** 18n;
-  const bobCooldown = 1n;
+  const bobCooldown = 60n;
   const bobFaucet = await viem.deployContract(
     "BobFaucet",
     [bobInitial, bobDrip, bobCooldown],
     { client: { wallet: deployer } }
   );
-  const bobToken = await viem.getContractAt(
-    "BobToken",
-    await bobFaucet.read.token()
+  const bobToken = await viem.getContractAt("BobToken", await bobFaucet.read.token());
+
+  const pool = await viem.deployContract("LendingPool", [oracle.address], {
+    client: { wallet: deployer },
+    libraries: {
+      [LIBRARIES.reserve]: reserveLogic.address,
+      [LIBRARIES.debtVault]: debtVaultLogic.address,
+      [LIBRARIES.config]: configLogic.address,
+      [LIBRARIES.supply]: depositLogic.address,
+      [LIBRARIES.borrow]: borrowLogic.address,
+    },
+  });
+
+  await pool.write.addReserve(
+    [aliceToken.address, irm.address, false, true, 0n, 0n, "Pool Alice", "pALC"],
+    { account: deployer.account.address }
+  );
+  await pool.write.addReserve(
+    [bobToken.address, irm.address, true, false, 750_000_000_000_000_000n, 850_000_000_000_000_000n, "Pool Bob", "pBOB"],
+    { account: deployer.account.address }
   );
 
-  // 4) Lending pool
-  const ltv = 750_000_000_000_000_000n;
-  const pool = await viem.deployContract(
-    "LendingPool",
-    [
-      bobToken.address,
-      aliceToken.address,
-      oracle.address,
-      irm.address,
-      ltv,
-      "PoolCoin",
-      "pCOIN",
-    ],
-    { client: { wallet: deployer } }
-  );
-
-  // 5) FlashLoanPool
-  const flashPool = await viem.deployContract(
-    "FlashLoanPool",
-    [aliceToken.address, bobToken.address],
-    { client: { wallet: deployer } }
-  );
-
-  // 6) FlashLoanSwap
-  const swap = await viem.deployContract(
-    "FlashLoanSwap",
-    [aliceToken.address, bobToken.address],
-    { client: { wallet: deployer } }
-  );
-
-  // 7) FlashLoanBot
-  const testBot = await viem.deployContract(
-    "FlashLoanBot",
-    [flashPool.address, pool.address, swap.address],
-    { client: { wallet: deployer } }
-  );
-
-  // 8) LiquidationBot (暂时注释掉，因为合约不存在)
-  // const liquidationBot = await viem.deployContract(
-  //   "LiquidationBot",
-  //   [flashPool.address, pool.address, aliceToken.address, bobToken.address, swap.address],
-  //   { client: { wallet: deployer } }
-  // );
-
+  console.log("ReserveLogic:", reserveLogic.address);
+  console.log("DebtVaultLogic:", debtVaultLogic.address);
+  console.log("ConfigLogic:", configLogic.address);
+  console.log("DepositLogic:", depositLogic.address);
+  console.log("BorrowLogic:", borrowLogic.address);
   console.log("Oracle:", oracle.address);
   console.log("InterestRateModel:", irm.address);
   console.log("AliceFaucet:", aliceFaucet.address);
@@ -98,29 +108,30 @@ export async function deploy() {
   console.log("BobFaucet:", bobFaucet.address);
   console.log("BobToken:", bobToken.address);
   console.log("LendingPool:", pool.address);
-  console.log("FlashLoanPool:", flashPool.address);
-  console.log("FlashLoanBot:", testBot.address);
-  console.log("FlashLoanSwap:", swap.address);
-  // console.log("LiquidationBot:", liquidationBot.address);
 
-  // 返回所有地址
-  return [
-    oracle.address,
-    irm.address,
-    aliceFaucet.address,
-    aliceToken.address,
-    bobFaucet.address,
-    bobToken.address,
-    pool.address,
-    flashPool.address,
-    testBot.address,
-    swap.address
-    // liquidationBot.address
-  ];
+  return {
+    reserveLogic: reserveLogic.address,
+    debtVaultLogic: debtVaultLogic.address,
+    configLogic: configLogic.address,
+    depositLogic: depositLogic.address,
+    borrowLogic: borrowLogic.address,
+    oracle: oracle.address,
+    interestRateModel: irm.address,
+    aliceFaucet: aliceFaucet.address,
+    aliceToken: aliceToken.address,
+    bobFaucet: bobFaucet.address,
+    bobToken: bobToken.address,
+    pool: pool.address,
+  } as const;
 }
 
-// deploy().catch((e) => {
-//   console.error(e);
-//   process.exit(1);
-// });
-// deploy()
+async function main() {
+  await deploy();
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

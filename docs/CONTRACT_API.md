@@ -7,7 +7,10 @@ All token amounts use 18 decimals unless stated otherwise (`1e18 = 1`).
 
 ## AliceToken / BobToken (ERC20)
 
-File: `contracts/AliceToken.sol`
+Files:
+
+- `contracts/token/AliceToken.sol`
+- `contracts/token/BobToken.sol`
 
 ### Getters
 
@@ -29,7 +32,7 @@ File: `contracts/AliceToken.sol`
 - `totalSupply() -> uint256`
   Purpose: return current total supply.
   Inputs: none.
-  Output: total supply.
+  Output: total token supply.
 
 - `balanceOf(address account) -> uint256`
   Purpose: return the token balance of an account.
@@ -37,55 +40,55 @@ File: `contracts/AliceToken.sol`
   Output: token balance.
 
 - `allowance(address owner, address spender) -> uint256`
-  Purpose: return how many tokens `spender` is allowed to spend from `owner`.
-  Inputs: `owner`: token owner address. `spender`: approved spender address.
+  Purpose: return the approved spending amount.
+  Inputs: `owner`: token owner. `spender`: approved spender.
   Output: allowance amount.
 
 ### Public Functions
 
 - `transfer(address to, uint256 amount) -> bool`
-  Purpose: send tokens from the caller to another address.
-  Inputs: `to`: receiver address. `amount`: token amount.
-  Output: `true` if transfer succeeds.
+  Purpose: transfer tokens from caller to another address.
+  Inputs: `to`: receiver. `amount`: token amount.
+  Output: `true` on success.
 
 - `approve(address spender, uint256 amount) -> bool`
-  Purpose: allow another address to spend the caller's tokens.
-  Inputs: `spender`: approved address. `amount`: approved amount.
-  Output: `true` if approval succeeds.
+  Purpose: approve another address to spend caller tokens.
+  Inputs: `spender`: approved spender. `amount`: allowance amount.
+  Output: `true` on success.
 
 - `transferFrom(address from, address to, uint256 amount) -> bool`
-  Purpose: transfer tokens from `from` to `to` using allowance.
-  Inputs: `from`: source address. `to`: receiver address. `amount`: token amount.
-  Output: `true` if transfer succeeds.
+  Purpose: transfer tokens using allowance.
+  Inputs: `from`: source. `to`: receiver. `amount`: token amount.
+  Output: `true` on success.
 
 - `mint(address to, uint256 amount)` (only owner)
   Purpose: mint new tokens.
-  Inputs: `to`: receiver address. `amount`: token amount.
+  Inputs: `to`: receiver. `amount`: token amount.
   Output: none.
 
 ---
 
 ## AliceFaucet / BobFaucet
 
-File:
+Files:
 
-- `contracts/AliceToken.sol`
-- `contracts/BobToken.sol`
+- `contracts/token/AliceToken.sol`
+- `contracts/token/BobToken.sol`
 
 ### Getters
 
 - `token() -> address`
-  Purpose: return the AliceToken contract address.
+  Purpose: return the token contract address managed by the faucet.
   Inputs: none.
   Output: token contract address.
 
 - `dripAmount() -> uint256`
-  Purpose: return how many tokens one successful claim gives.
+  Purpose: return the token amount dispensed per successful claim.
   Inputs: none.
   Output: drip amount.
 
 - `cooldown() -> uint256`
-  Purpose: return the minimum waiting time between two claims.
+  Purpose: return the cooldown between two claims.
   Inputs: none.
   Output: cooldown in seconds.
 
@@ -97,74 +100,69 @@ File:
 ### Public Functions
 
 - `claim()`
-  Purpose: claim free Alice tokens if the cooldown has passed.
+  Purpose: claim faucet tokens if cooldown has passed.
   Inputs: none.
   Output: none.
 
 - `refill(uint256 amount)` (only owner)
-  Purpose: mint more Alice tokens into the faucet.
+  Purpose: mint more tokens into the faucet.
   Inputs: `amount`: token amount.
   Output: none.
 
 ---
 
-## PoolCoin (Deposit Receipt Token)
+## PoolCoin (Reserve aToken)
 
 File: `contracts/PoolCoin.sol`
 
 ### Getters
 
 - `name() -> string`
-  Purpose: return the token name.
+  Purpose: return the aToken name.
   Inputs: none.
   Output: token name.
 
 - `symbol() -> string`
-  Purpose: return the token symbol.
+  Purpose: return the aToken symbol.
   Inputs: none.
   Output: token symbol.
 
-- `decimals() -> uint8`
-  Purpose: return token decimals.
-  Inputs: none.
-  Output: decimals, usually `18`.
-
 - `totalSupply() -> uint256`
-  Purpose: return current total supply of receipt shares.
+  Purpose: return total aToken share supply for one reserve.
   Inputs: none.
-  Output: total share supply.
+  Output: aToken share supply.
 
 - `balanceOf(address account) -> uint256`
-  Purpose: return how many PoolCoin shares an account owns.
+  Purpose: return aToken shares held by an address.
   Inputs: `account`: wallet address.
-  Output: share balance.
+  Output: aToken share balance.
 
 - `allowance(address owner, address spender) -> uint256`
-  Purpose: return approved PoolCoin share allowance.
-  Inputs: `owner`: token owner address. `spender`: approved spender address.
+  Purpose: return approved aToken allowance.
+  Inputs: `owner`: token owner. `spender`: approved spender.
   Output: allowance amount.
 
 - `pool() -> address`
-  Purpose: return the LendingPool address allowed to mint and burn shares.
+  Purpose: return the LendingPool allowed to mint and burn.
   Inputs: none.
   Output: pool address.
 
 ### Public Functions
 
 - `transfer(address to, uint256 amount) -> bool`
-  Purpose: transfer PoolCoin shares.
-  Inputs: `to`: receiver address. `amount`: share amount.
-  Output: `true` if transfer succeeds.
+  Purpose: transfer wallet-held aToken shares.
+  Inputs: `to`: receiver. `amount`: aToken shares.
+  Output: `true` on success.
 
 - `approve(address spender, uint256 amount) -> bool`
-  Purpose: approve PoolCoin share spending.
-  Inputs: `spender`: approved address. `amount`: approved amount.
-  Output: `true` if approval succeeds.
+  Purpose: approve wallet-held aToken allowance.
+  Inputs: `spender`: approved spender. `amount`: aToken shares.
+  Output: `true` on success.
 
 - `transferFrom(address from, address to, uint256 amount) -> bool`
-  Purpose: transfer PoolCoin shares using allowance.
-  Inputs: `from`: source address. `to`: receiver address. `amount`: share amount.
-  Output: `true` if transfer succeeds.
+  Purpose: transfer wallet-held aToken shares using allowance.
+  Inputs: `from`: source. `to`: receiver. `amount`: aToken shares.
+  Output: `true` on success.
 
 - `setPool(address newPool)` (only owner)
   Purpose: update the LendingPool address.
@@ -172,13 +170,13 @@ File: `contracts/PoolCoin.sol`
   Output: none.
 
 - `mint(address to, uint256 amount)` (only pool)
-  Purpose: mint receipt shares.
-  Inputs: `to`: receiver address. `amount`: share amount.
+  Purpose: mint reserve aToken shares.
+  Inputs: `to`: receiver. `amount`: aToken shares.
   Output: none.
 
 - `burn(address from, uint256 amount)` (only pool)
-  Purpose: burn receipt shares.
-  Inputs: `from`: owner address. `amount`: share amount.
+  Purpose: burn reserve aToken shares.
+  Inputs: `from`: share owner. `amount`: aToken shares.
   Output: none.
 
 ---
@@ -190,7 +188,7 @@ File: `contracts/Oracle.sol`
 ### Getters
 
 - `getPrice(address asset) -> uint256`
-  Purpose: return the current price of an asset.
+  Purpose: return the current oracle price of an asset.
   Inputs: `asset`: token address.
   Output: price scaled by `1e18`.
 
@@ -215,24 +213,24 @@ File: `contracts/InterestRate.sol`
   Output: rate per block, scaled by `1e18`.
 
 - `slope1() -> uint256`
-  Purpose: return the interest slope below kink.
+  Purpose: return the slope before kink.
   Inputs: none.
   Output: rate per block, scaled by `1e18`.
 
 - `slope2() -> uint256`
-  Purpose: return the interest slope above kink.
+  Purpose: return the slope after kink.
   Inputs: none.
   Output: rate per block, scaled by `1e18`.
 
 - `kink() -> uint256`
-  Purpose: return the utilization threshold where the slope changes.
+  Purpose: return the kink utilization.
   Inputs: none.
   Output: utilization ratio, scaled by `1e18`.
 
 ### Public Functions
 
 - `getBorrowRate(uint256 utilization) -> uint256`
-  Purpose: calculate the borrow rate for a utilization value.
+  Purpose: calculate borrow rate from utilization.
   Inputs: `utilization`: utilization ratio, scaled by `1e18`.
   Output: borrow rate per block, scaled by `1e18`.
 
@@ -242,183 +240,232 @@ File: `contracts/InterestRate.sol`
 
 File: `contracts/LendingPool.sol`
 
+### Constants
+
+- `RAY() -> uint256`
+  Purpose: return the base unit for price and ratio calculations.
+  Output: constant `1e18`.
+
+- `BPS() -> uint256`
+  Purpose: return the denominator for basis point calculations.
+  Output: constant `10_000`.
+
 ### Getters
 
-- `collateralToken() -> address`
-  Purpose: return the collateral token contract address.
-  Inputs: none.
-  Output: token contract address.
-
-- `borrowToken() -> address`
-  Purpose: return the borrow token contract address.
-  Inputs: none.
-  Output: token contract address.
-
-- `poolCoin() -> address`
-  Purpose: return the PoolCoin contract address.
-  Inputs: none.
-  Output: token contract address.
+#### State
 
 - `oracle() -> address`
-  Purpose: return the Oracle contract address.
+  Purpose: return the current oracle contract.
   Inputs: none.
   Output: oracle address.
 
-- `interestRateModel() -> address`
-  Purpose: return the interest rate model contract address.
+- `liquidationBonus() -> uint256`
+  Purpose: return liquidation bonus in basis points.
   Inputs: none.
-  Output: model address.
+  Output: basis points.
 
-- `ltv() -> uint256`
-  Purpose: return the current loan-to-value limit.
+- `nextDebtVaultId() -> uint256`
+  Purpose: return the next debtVault id to be assigned.
   Inputs: none.
-  Output: LTV ratio, scaled by `1e18`.
+  Output: next debtVault id.
 
-- `totalBorrows() -> uint256`
-  Purpose: return total outstanding debt in the pool.
-  Inputs: none.
-  Output: total debt amount.
+#### Reserve
 
-- `borrowIndex() -> uint256`
-  Purpose: return the borrow-side interest index.
-  Inputs: none.
-  Output: index, scaled by `1e18`.
+- `reserves(address asset) -> (...)`
+  Purpose: return reserve configuration and accounting fields for one asset.
+  Inputs: `asset`: reserve asset address.
+  Output: reserve flags, thresholds, indexes, aToken address, and rate model address.
 
-- `liquidityIndex() -> uint256`
-  Purpose: return the supply-side interest index.
-  Inputs: none.
-  Output: index, scaled by `1e18`.
-
-- `lastAccrualBlock() -> uint256`
-  Purpose: return the last block number used for interest accrual.
-  Inputs: none.
-  Output: block number.
-
-- `userBorrowPrincipal(address user) -> uint256`
-  Purpose: return the stored borrow principal of a user.
-  Inputs: `user`: wallet address.
-  Output: stored principal amount.
-
-- `userBorrowIndex(address user) -> uint256`
-  Purpose: return the borrow index snapshot stored for a user.
-  Inputs: `user`: wallet address.
-  Output: index snapshot.
-
-- `isBorrower(address user) -> bool`
-  Purpose: return whether an address has been recorded as a borrower.
-  Inputs: `user`: wallet address.
+- `isReserveAsset(address asset) -> bool`
+  Purpose: return whether an asset has been registered as a reserve.
+  Inputs: `asset`: token address.
   Output: `true` or `false`.
 
-- `borrowers(uint256 index) -> address`
-  Purpose: return one borrower address from the borrower list.
-  Inputs: `index`: array index.
-  Output: borrower address.
+- `getReserveAToken(address asset) -> address`
+  Purpose: return the reserve-specific aToken address.
+  Inputs: `asset`: reserve asset address.
+  Output: aToken address.
 
-- `liquidationBonus() -> uint256`
-  Purpose: return the liquidation bonus rate.
+- `getReserveAssets() -> address[]`
+  Purpose: return all registered reserve assets.
   Inputs: none.
-  Output: bonus rate in basis points.
+  Output: reserve asset list.
 
-- `liquidationThreshold() -> uint256`
-  Purpose: return the health factor threshold used for liquidation.
-  Inputs: none.
-  Output: threshold, scaled by `1e18`.
-
-- `totalLiquidations() -> uint256`
-  Purpose: return the number of liquidations executed so far.
-  Inputs: none.
-  Output: liquidation count.
-
-- `BONUS_BASE() -> uint256`
-  Purpose: return the denominator used for liquidation bonus calculations.
-  Inputs: none.
-  Output: constant value, currently `10000`.
-
-- `getUtilization() -> uint256`
-  Purpose: return current pool utilization.
-  Inputs: none.
+- `getReserveUtilization(address asset) -> uint256`
+  Purpose: return current utilization of a reserve.
+  Inputs: `asset`: reserve asset address.
   Output: utilization ratio, scaled by `1e18`.
 
-- `healthFactor(address user) -> uint256`
-  Purpose: return the health factor of a user.
-  Inputs: `user`: wallet address.
+#### DebtVault
+
+- `getOwnerDebtVaultIds(address owner) -> uint256[]`
+  Purpose: return all debtVault ids owned by a user.
+  Inputs: `owner`: wallet address.
+  Output: debtVault id list.
+
+- `healthFactor(uint256 debtVaultId) -> uint256`
+  Purpose: return health factor of one debtVault.
+  Inputs: `debtVaultId`: debtVault id.
   Output: health factor. `>= 1e18` means safe.
 
-- `estimateLiquidationProfit(uint256 repayAmount) -> (uint256 bonus, uint256 collateralOut)`
-  Purpose: estimate liquidation reward for a given repay amount.
-  Inputs: `repayAmount`: borrow token amount to repay.
-  Output: `bonus`: bonus portion. `collateralOut`: estimated collateral received.
+- `getDebtVaultHealthFactor(uint256 debtVaultId) -> uint256`
+  Purpose: same as `healthFactor`, kept as an explicit getter.
+  Inputs: `debtVaultId`: debtVault id.
+  Output: health factor.
 
-- `getBorrowers() -> address[]`
-  Purpose: return the full borrower list.
-  Inputs: none.
-  Output: borrower address array.
+- `getDebtVaultValues(uint256 debtVaultId) -> (uint256 maxBorrowableValue, uint256 liquidationThresholdValue, uint256 debtValue)`
+  Purpose: return the debtVault borrow capacity, liquidation-adjusted collateral value, and debt value.
+  Inputs: `debtVaultId`: debtVault id.
+  Output: values scaled by oracle prices.
 
-- `getLiquidatableAccounts() -> address[]`
-  Purpose: return all currently liquidatable accounts.
-  Inputs: none.
-  Output: address array.
+- `getDebtVaultSummary(uint256 debtVaultId) -> (address borrower, bool active, uint256 hf, uint256 liquidationThresholdValue, uint256 debtValue, uint256 maxBorrowableValue)`
+  Purpose: return a compact debtVault summary.
+  Inputs: `debtVaultId`: debtVault id.
+  Output: borrower, status, health factor, liquidation threshold value, debt value, max borrowable value.
 
-- `getAccountInfo(address user) -> (uint256 collateral, uint256 debt, uint256 healthFactor_)`
-  Purpose: return a user's collateral, debt, and health factor in one call.
-  Inputs: `user`: wallet address.
-  Output: `collateral`: collateral amount. `debt`: debt amount. `healthFactor_`: health factor.
+- `getDebtVaultCollateralShares(uint256 debtVaultId, address asset) -> uint256`
+  Purpose: return locked collateral shares for one debtVault and asset.
+  Inputs: `debtVaultId`: debtVault id. `asset`: reserve asset.
+  Output: aToken shares.
+
+- `getDebtVaultCollateralAssetAmount(uint256 debtVaultId, address asset) -> uint256`
+  Purpose: return current asset amount of locked collateral aToken shares.
+  Inputs: `debtVaultId`: debtVault id. `asset`: reserve asset.
+  Output: asset amount.
+
+- `getDebtVaultDebtAmount(uint256 debtVaultId, address asset) -> uint256`
+  Purpose: return current debt amount of one asset inside one debtVault.
+  Inputs: `debtVaultId`: debtVault id. `asset`: borrowed asset.
+  Output: debt amount.
+
+- `getDebtVaultCollateralAssets(uint256 debtVaultId) -> address[]`
+  Purpose: return the collateral asset list of a debtVault.
+  Inputs: `debtVaultId`: debtVault id.
+  Output: asset address list.
+
+- `getDebtVaultBorrowedAssets(uint256 debtVaultId) -> address[]`
+  Purpose: return the borrowed asset list of a debtVault.
+  Inputs: `debtVaultId`: debtVault id.
+  Output: asset address list.
+
+#### User
+
+- `getUserCustodiedShares(address user, address asset) -> uint256`
+  Purpose: return reserve aToken shares held in pool custody for a user.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: aToken shares.
+
+- `getUserLockedShares(address user, address asset) -> uint256`
+  Purpose: return how many custodied shares are locked as collateral.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: aToken shares.
+
+- `getUserClaimableShares(address user, address asset) -> uint256`
+  Purpose: return custodied aToken shares that are not locked and can be claimed.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: aToken shares.
+
+- `getUserDebtBalance(address user, address asset) -> uint256`
+  Purpose: return total debt of one asset across all debtVaults owned by a user.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: debt amount.
 
 ### Public Functions
 
-- `deposit(uint256 amount)`
-  Purpose: deposit collateral and mint PoolCoin shares.
-  Inputs: `amount`: collateral token amount.
+#### Reserve Management (only owner)
+
+- `addReserve(address asset, address interestRateModel, bool canBeCollateral, bool canBeBorrowed, uint256 ltv, uint256 liquidationThreshold, string aTokenName, string aTokenSymbol)`
+  Purpose: register a new reserve and deploy its aToken.
+  Inputs: reserve asset, rate model, collateral/borrow flags, risk parameters, aToken metadata.
   Output: none.
 
-- `withdraw(uint256 amount)`
-  Purpose: withdraw collateral and burn PoolCoin shares.
-  Inputs: `amount`: collateral token amount.
+- `setReserveConfig(address asset, bool canBeCollateral, bool canBeBorrowed, uint256 ltv, uint256 liquidationThreshold)`
+  Purpose: update reserve risk configuration.
+  Inputs: reserve asset and new flags/thresholds.
   Output: none.
 
-- `borrow(uint256 amount)`
-  Purpose: borrow borrowToken from the pool.
-  Inputs: `amount`: borrow token amount.
+- `setInterestRateModel(address asset, address newModel)`
+  Purpose: update the reserve rate model.
+  Inputs: `asset`: reserve asset. `newModel`: new model address.
   Output: none.
 
-- `repay(uint256 amount)`
-  Purpose: repay borrowToken debt.
-  Inputs: `amount`: borrow token amount.
+- `setOracle(address newOracle)`
+  Purpose: update the oracle contract.
+  Inputs: `newOracle`: oracle address.
   Output: none.
 
-- `liquidate(address borrower, uint256 repayAmount)`
-  Purpose: repay a borrower's debt and receive collateral plus bonus if the position is unhealthy.
-  Inputs: `borrower`: target borrower address. `repayAmount`: amount of borrow token to repay. `0` means repay full debt.
-  Output: none.
-
-- `fundBorrowToken(uint256 amount)` (only owner)
-  Purpose: add borrow token liquidity to the pool.
-  Inputs: `amount`: borrow token amount.
-  Output: none.
-
-- `setLtv(uint256 newLtv)` (only owner)
-  Purpose: update the pool LTV.
-  Inputs: `newLtv`: LTV ratio, scaled by `1e18`.
-  Output: none.
-
-- `setOracle(address newOracle)` (only owner)
-  Purpose: update the Oracle contract.
-  Inputs: `newOracle`: new oracle address.
-  Output: none.
-
-- `setInterestRateModel(address newModel)` (only owner)
-  Purpose: update the interest rate model contract.
-  Inputs: `newModel`: new model address.
-  Output: none.
-
-- `setLiquidationBonus(uint256 _bonus)` (only owner)
+- `setLiquidationBonus(uint256 _bonus)`
   Purpose: update liquidation bonus.
-  Inputs: `_bonus`: bonus in basis points.
+  Inputs: `_bonus`: basis points.
   Output: none.
 
-- `setLiquidationThreshold(uint256 _threshold)` (only owner)
-  Purpose: update liquidation threshold.
-  Inputs: `_threshold`: health factor threshold, scaled by `1e18`.
+- `fundReserve(address asset, uint256 amount)`
+  Purpose: add extra asset liquidity to a reserve without minting user aToken shares.
+  Inputs: `asset`: reserve asset. `amount`: asset amount.
+  Output: none.
+
+- `setCloseFactor(uint256 _closeFactor)`
+  Version: 0.0.1
+  Purpose: update close factor.
+  Inputs: `_closeFactor`: new closefactor, not allowed bigger than BPS.
+  Output: none.
+
+#### Deposit & Withdraw
+
+- `deposit(address asset, uint256 amount)`
+  Purpose: deposit asset into one reserve and mint custodied aToken shares for the caller.
+  Inputs: `asset`: reserve asset. `amount`: asset amount.
+  Output: none.
+
+- `withdraw(address asset, uint256 amount)`
+  Purpose: withdraw asset from the caller's claimable custodied deposit.
+  Inputs: `asset`: reserve asset. `amount`: asset amount.
+  Output: none.
+
+- `claimAToken(address asset, uint256 shares, address to)`
+  Purpose: move claimable custodied aToken shares out to a wallet.
+  Inputs: `asset`: reserve asset. `shares`: aToken shares. `to`: receiver address.
+  Output: none.
+
+- `recustodyAToken(address asset, uint256 shares)`
+  Purpose: move wallet-held aToken shares back into pool custody.
+  Inputs: `asset`: reserve asset. `shares`: aToken shares.
+  Output: none.
+
+#### DebtVault
+
+- `openDebtVault() -> uint256`
+  Purpose: create a new debtVault for the caller.
+  Inputs: none.
+  Output: new debtVault id.
+
+- `depositCollateral(uint256 debtVaultId, address asset, uint256 amount)`
+  Purpose: move claimable deposited aToken shares into one debtVault as collateral.
+  Inputs: `debtVaultId`: debtVault id. `asset`: collateral asset. `amount`: asset amount to convert from deposited balance.
+  Output: none.
+
+- `withdrawCollateral(uint256 debtVaultId, address asset, uint256 amount)`
+  Purpose: move collateral from a debtVault back to normal deposited balance if health factor remains valid.
+  Inputs: `debtVaultId`: debtVault id. `asset`: collateral asset. `amount`: asset amount to convert from collateral.
+  Output: none.
+
+#### Borrow & Repay
+
+- `borrow(uint256 debtVaultId, address asset, uint256 amount)`
+  Purpose: borrow one reserve asset against one debtVault.
+  Inputs: `debtVaultId`: debtVault id. `asset`: borrowed asset. `amount`: asset amount.
+  Output: none.
+
+- `repay(uint256 debtVaultId, address asset, uint256 amount)`
+  Purpose: repay one reserve debt inside one debtVault.
+  Inputs: `debtVaultId`: debtVault id. `asset`: debt asset. `amount`: repay amount.
+  Output: none.
+
+#### Liquidation
+
+- `liquidate(uint256 debtVaultId, address debtAsset, address collateralAsset, uint256 repayAmount)`
+  Purpose: liquidate an unhealthy debtVault by repaying one debt asset and seizing one collateral asset.
+  Inputs: `debtVaultId`: target debtVault. `debtAsset`: asset being repaid. `collateralAsset`: asset being seized. `repayAmount`: requested repay amount.
   Output: none.
 
 ---
