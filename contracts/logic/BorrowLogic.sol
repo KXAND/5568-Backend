@@ -47,12 +47,16 @@ library BorrowLogic {
         require(assetCash >= amount, "LendingPool: insufficient liquidity");
 
         LendingPoolTypes.DebtVault storage debtVault = debtVaults[debtVaultId];
+        uint256 currentDebt = ReserveLogic.borrowBalance(
+            debtVaults,
+            debtVaultId,
+            asset,
+            reserve
+        );
 
         reserve.totalBorrows += amount;
         debtVault.borrowedIndex[asset] = reserve.borrowIndex;
-        debtVault.borrowedPrincipal[asset] +=
-            amount /
-            debtVault.borrowedIndex[asset];
+        debtVault.borrowedPrincipal[asset] = currentDebt + amount;
 
         if (!isBorrowedAssetInDebtVault[debtVaultId][asset]) {
             isBorrowedAssetInDebtVault[debtVaultId][asset] = true;
