@@ -4,11 +4,11 @@ pragma solidity ^0.8.28;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract PoolCoin is ERC20, Ownable {
+contract AToken is ERC20, Ownable {
     address public pool;
 
     modifier onlyPool() {
-        require(msg.sender == pool, "PoolCoin: only pool");
+        require(msg.sender == pool, "AToken: only pool");
         _;
     }
 

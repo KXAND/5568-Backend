@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {PoolCoin} from "../PoolCoin.sol";
+import {AToken} from "../AToken.sol";
 import {InterestRateModel} from "../InterestRate.sol";
 import {LendingPoolTypes} from "../types/LendingPoolTypes.sol";
 
@@ -36,7 +36,7 @@ library ConfigLogic {
             "LendingPool: ltv > threshold"
         );
 
-        PoolCoin aToken = new PoolCoin(
+        AToken aToken = new AToken(
             params.aTokenName,
             params.aTokenSymbol,
             owner,

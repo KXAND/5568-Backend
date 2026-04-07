@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {PoolCoin} from "../PoolCoin.sol";
+import {AToken} from "../AToken.sol";
 import {InterestRateModel} from "../InterestRate.sol";
 
 library LendingPoolTypes {
@@ -38,7 +38,7 @@ library LendingPoolTypes {
         uint256 borrowIndex;
         uint256 liquidityIndex;
         uint256 lastAccrualBlock;
-        PoolCoin aToken;
+        AToken aToken;
         InterestRateModel interestRateModel;
     }
 

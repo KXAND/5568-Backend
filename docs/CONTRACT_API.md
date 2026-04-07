@@ -111,9 +111,9 @@ Files:
 
 ---
 
-## PoolCoin (Reserve aToken)
+## AToken (Reserve aToken)
 
-File: `contracts/PoolCoin.sol`
+File: `contracts/AToken.sol`
 
 ### Getters
 

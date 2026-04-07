@@ -80,15 +80,15 @@ Files:
 
 ---
 
-## PoolCoin
+## AToken
 
-File: `contracts/PoolCoin.sol`
+File: `contracts/AToken.sol`
 
 ### Getters
 
 - `balanceOf(address account) -> uint256`
   Version: 0.0.1
-  Purpose: return how many PoolCoin shares an account owns.
+  Purpose: return how many AToken shares an account owns.
   Inputs: `account`: wallet address.
   Output: aToken share balance.
 
@@ -102,13 +102,13 @@ File: `contracts/PoolCoin.sol`
 
 - `transfer(address to, uint256 amount) -> bool`
   Version: 0.0.1
-  Purpose: transfer PoolCoin shares.
+  Purpose: transfer AToken shares.
   Inputs: `to`: receiver address. `amount`: aToken shares.
   Output: `true` if transfer succeeds.
 
 - `approve(address spender, uint256 amount) -> bool`
   Version: 0.0.1
-  Purpose: approve PoolCoin share spending.
+  Purpose: approve AToken share spending.
   Inputs: `spender`: approved address. `amount`: aToken shares.
   Output: `true` if approval succeeds.
 
