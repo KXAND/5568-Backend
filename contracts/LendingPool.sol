@@ -108,6 +108,7 @@ contract LendingPool is Ownable {
 
   // 清算函数
   function liquidate(address borrower, uint256 repayAmount) external {
+
     require(borrower != address(0), "Invalid borrower");
     
     // 检查健康因子
