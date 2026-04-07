@@ -566,14 +566,14 @@ File: `contracts/Flashloan/FlashLoanBot.sol`
 
 ### Public Functions
 
-- `borrow(address token, uint256 amount, address borrower)`
-  Purpose: trigger flash loan then liquidation strategy.
-  Inputs: `token`: flash-loaned token. `amount`: flash loan amount. `borrower`: target borrower to liquidate.
+- `borrow(address token, uint256 amount, uint256 debtVaultId, address collateralAsset)`
+  Purpose: trigger flash loan then liquidation strategy for one debtVault.
+  Inputs: `token`: flash-loaned debt asset. `amount`: flash loan amount. `debtVaultId`: target debtVault id. `collateralAsset`: collateral asset to seize and swap.
   Output: none.
 
 - `executeOperation(address token, uint256 amount, uint256 fee, address initiator, bytes data) -> bool`
   Purpose: flash loan callback implementation used by FlashLoanPool.
-  Inputs: `token`: loan token. `amount`: borrowed amount. `fee`: flash fee. `initiator`: flash initiator (currently unused in logic). `data`: encoded borrower address.
+  Inputs: `token`: flash-loaned debt asset. `amount`: borrowed amount. `fee`: flash fee. `initiator`: flash initiator (currently unused in logic). `data`: encoded `(debtVaultId, collateralAsset)` payload.
   Output: `true` when liquidation, swap, and repayment flow succeeds.
 
 ---

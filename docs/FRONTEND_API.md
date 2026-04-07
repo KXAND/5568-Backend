@@ -443,3 +443,40 @@ File: `contracts/LendingPool.sol`
 - Claimed wallet-held aTokens are not used as active collateral until the user explicitly sends them back with `recustodyAToken`.
 - Only claimable custodied aToken shares can be sent out with `claimAToken`.
 - Reserve onboarding and risk configuration are owner-only flows and are intentionally not listed here as normal frontend actions.
+
+---
+
+## FlashLoanBot
+
+File: `contracts/Flashloan/FlashLoanBot.sol`
+
+### Getters
+
+- `flashPool() -> address`
+  Purpose: return linked flash loan pool address.
+  Inputs: none.
+  Output: contract address.
+
+- `lendingPool() -> address`
+  Purpose: return linked lending pool address.
+  Inputs: none.
+  Output: contract address.
+
+- `swap() -> address`
+  Purpose: return linked swap address.
+  Inputs: none.
+  Output: contract address.
+
+### Public Functions
+
+- `borrow(address token, uint256 amount, uint256 debtVaultId, address collateralAsset)`
+  Purpose: trigger a flash loan liquidation strategy against one unhealthy debtVault.
+  Inputs: `token`: flash-borrowed debt asset. `amount`: flash loan amount. `debtVaultId`: target debtVault id. `collateralAsset`: asset to seize and swap.
+  Output: none.
+
+### Frontend Notes
+
+- This is an advanced operator flow rather than a normal end-user action.
+- Before calling it, the frontend should verify the target debtVault is liquidatable with `healthFactor(debtVaultId) < 1e18`.
+- The bot now targets a `debtVaultId`, not a borrower wallet address.
+- The bot repays with the flash-borrowed debt asset, withdraws seized collateral from lending pool custody, swaps it through `FlashLoanSwap`, and then repays the flash loan.
