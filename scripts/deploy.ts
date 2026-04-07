@@ -96,6 +96,24 @@ export async function deploy() {
     { account: deployer.account.address }
   );
 
+  const flashPool = await viem.deployContract(
+    "FlashLoanPool",
+    [aliceToken.address, bobToken.address],
+    { client: { wallet: deployer } }
+  );
+
+  const flashSwap = await viem.deployContract(
+    "FlashLoanSwap",
+    [aliceToken.address, bobToken.address],
+    { client: { wallet: deployer } }
+  );
+
+  const flashBot = await viem.deployContract(
+    "FlashLoanBot",
+    [flashPool.address, pool.address, flashSwap.address],
+    { client: { wallet: deployer } }
+  );
+
   console.log("ReserveLogic:", reserveLogic.address);
   console.log("DebtVaultLogic:", debtVaultLogic.address);
   console.log("ConfigLogic:", configLogic.address);
@@ -108,6 +126,9 @@ export async function deploy() {
   console.log("BobFaucet:", bobFaucet.address);
   console.log("BobToken:", bobToken.address);
   console.log("LendingPool:", pool.address);
+  console.log("FlashLoanPool:", flashPool.address);
+  console.log("FlashLoanSwap:", flashSwap.address);
+  console.log("FlashLoanBot:", flashBot.address);
 
   return {
     reserveLogic: reserveLogic.address,
@@ -122,6 +143,9 @@ export async function deploy() {
     bobFaucet: bobFaucet.address,
     bobToken: bobToken.address,
     pool: pool.address,
+    flashPool: flashPool.address,
+    flashSwap: flashSwap.address,
+    flashBot: flashBot.address,
   } as const;
 }
 

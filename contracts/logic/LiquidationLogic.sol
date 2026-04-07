@@ -56,8 +56,8 @@ library LiquidationLogic {
             debtReserve
         );
         require(principal > 0, "LendingPool: no debt");
-        actualRepayAmount  = (principal * params.closeFactor) / params.bps;// max allowed RepayAmount
-        actualRepayAmount = params.repayAmount > actualRepayAmount // min(maxRepayAmount, request repayAmount)
+        actualRepayAmount = (principal * params.closeFactor) / params.bps;
+        actualRepayAmount = params.repayAmount > actualRepayAmount
             ? actualRepayAmount
             : params.repayAmount;
 
@@ -84,8 +84,8 @@ library LiquidationLogic {
         // interact
         debtReserve.totalBorrows -= actualRepayAmount;
         debtVault.borrowedPrincipal[params.debtAsset] =
-            (principal - actualRepayAmount) /
-            debtVault.borrowedIndex[params.debtAsset];
+            principal - actualRepayAmount;
+        debtVault.borrowedIndex[params.debtAsset] = debtReserve.borrowIndex;
         debtVault.collateralShares[
             params.collateralAsset
         ] -= actualTransferredShares;
