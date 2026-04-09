@@ -17,14 +17,18 @@ import {ConfigLogic} from "./logic/ConfigLogic.sol";
 import {DepositLogic} from "./logic/DepositLogic.sol";
 import {BorrowLogic} from "./logic/BorrowLogic.sol";
 import {LiquidationLogic} from "./logic/LiquidationLogic.sol";
+import {IPoolIncentivesController} from "./incentives/PoolIncentivesController.sol";
 
 contract LendingPool is Ownable {
     using SafeERC20 for IERC20;
 
     uint256 public constant RAY = 1e18;
     uint256 public constant BPS = 10_000;
+    uint8 public constant DEPOSIT_REWARD_TYPE = 0;
+    uint8 public constant BORROW_REWARD_TYPE = 1;
 
     SimpleOracle public oracle;
+    IPoolIncentivesController public poolIncentivesController;
     uint256 public liquidationBonus = 500;
     uint256 public closeFactor = 5000;
     uint256 public nextDebtVaultId = 1;
@@ -54,6 +58,7 @@ contract LendingPool is Ownable {
     );
     event SetInterestRateModel(address indexed asset, address indexed newModel);
     event SetOracle(address newOracle);
+    event SetPoolIncentivesController(address newController);
     event SetLiquidationBonus(uint256 bonus);
     event FundReserve(address indexed asset, uint256 amount);
     event Borrow(
@@ -143,6 +148,13 @@ contract LendingPool is Ownable {
         emit SetOracle(newOracle);
     }
 
+    function setPoolIncentivesController(
+        address newController
+    ) external onlyOwner {
+        poolIncentivesController = IPoolIncentivesController(newController);
+        emit SetPoolIncentivesController(newController);
+    }
+
     function setInterestRateModel(
         address asset,
         address newModel
@@ -222,6 +234,13 @@ contract LendingPool is Ownable {
     function withdraw(address asset, uint256 amount) external {
         LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
         _accrueInterest(asset, reserve);
+        _handleRewardAction(
+            msg.sender,
+            asset,
+            DEPOSIT_REWARD_TYPE,
+            reserve.aToken.totalSupply(),
+            getUserCustodiedShares(msg.sender, asset)
+        );
         DepositLogic.executeWithdraw(
             reserves,
             custodiedShares,
@@ -373,6 +392,14 @@ contract LendingPool is Ownable {
     ) external {
         LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
         _accrueInterest(asset, reserve);
+        address borrower = debtVaults[debtVaultId].borrower;
+        _handleRewardAction(
+            borrower,
+            asset,
+            BORROW_REWARD_TYPE,
+            reserve.totalDebtPrincipal,
+            this.getUserDebtPrincipal(borrower, asset)
+        );
         uint256 repayAmount = BorrowLogic.executeRepay(
             reserves,
             debtVaults,
@@ -612,6 +639,26 @@ contract LendingPool is Ownable {
 
     function _updateDebtVaultHealthFactor(uint256 debtVaultId) internal {
         debtVaults[debtVaultId].healthFactor = healthFactor(debtVaultId);
+    }
+
+    function _handleRewardAction(
+        address user,
+        address asset,
+        uint8 rewardType,
+        uint256 totalPrincipal,
+        uint256 userPrincipal
+    ) internal {
+        if (address(poolIncentivesController) == address(0)) {
+            return;
+        }
+
+        poolIncentivesController.handleAction(
+            user,
+            asset,
+            rewardType,
+            totalPrincipal,
+            userPrincipal
+        );
     }
 
     function _getReserve(

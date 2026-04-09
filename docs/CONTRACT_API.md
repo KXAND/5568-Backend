@@ -111,6 +111,152 @@ Files:
 
 ---
 
+## PoolCoin (ERC20)
+
+File: `contracts/token/PoolCoin.sol`
+
+### Getters
+
+- `name() -> string`
+  Version: 0.0.1
+  Purpose: return the token name.
+  Inputs: none.
+  Output: token name.
+
+- `symbol() -> string`
+  Version: 0.0.1
+  Purpose: return the token symbol.
+  Inputs: none.
+  Output: token symbol.
+
+- `decimals() -> uint8`
+  Version: 0.0.1
+  Purpose: return token decimals.
+  Inputs: none.
+  Output: decimals, usually `18`.
+
+- `totalSupply() -> uint256`
+  Version: 0.0.1
+  Purpose: return current total supply.
+  Inputs: none.
+  Output: total token supply.
+
+- `balanceOf(address account) -> uint256`
+  Version: 0.0.1
+  Purpose: return the token balance of an account.
+  Inputs: `account`: wallet address.
+  Output: token balance.
+
+- `allowance(address owner, address spender) -> uint256`
+  Version: 0.0.1
+  Purpose: return the approved spending amount.
+  Inputs: `owner`: token owner. `spender`: approved spender.
+  Output: allowance amount.
+
+### Public Functions
+
+- `transfer(address to, uint256 amount) -> bool`
+  Version: 0.0.1
+  Purpose: transfer tokens from caller to another address.
+  Inputs: `to`: receiver. `amount`: token amount.
+  Output: `true` on success.
+
+- `approve(address spender, uint256 amount) -> bool`
+  Version: 0.0.1
+  Purpose: approve another address to spend caller tokens.
+  Inputs: `spender`: approved spender. `amount`: allowance amount.
+  Output: `true` on success.
+
+- `transferFrom(address from, address to, uint256 amount) -> bool`
+  Version: 0.0.1
+  Purpose: transfer tokens using allowance.
+  Inputs: `from`: source. `to`: receiver. `amount`: token amount.
+  Output: `true` on success.
+
+---
+
+## PoolIncentivesController
+
+File: `contracts/incentives/PoolIncentivesController.sol`
+
+### Getters
+
+- `RAY() -> uint256`
+  Version: 0.0.1
+  Purpose: return the reward index precision base unit.
+  Inputs: none.
+  Output: constant `1e18`.
+
+- `DEPOSIT_REWARD_TYPE() -> uint8`
+  Version: 0.0.1
+  Purpose: return the reward type id used for deposit-side rewards.
+  Inputs: none.
+  Output: constant `0`.
+
+- `BORROW_REWARD_TYPE() -> uint8`
+  Version: 0.0.1
+  Purpose: return the reward type id used for borrow-side rewards.
+  Inputs: none.
+  Output: constant `1`.
+
+- `poolToken() -> address`
+  Version: 0.0.1
+  Purpose: return the POOL token contract used for rewards.
+  Inputs: none.
+  Output: token address.
+
+- `actionHandler() -> address`
+  Version: 0.0.1
+  Purpose: return the contract allowed to call `handleAction`.
+  Inputs: none.
+  Output: contract address.
+
+- `rewards(bytes32 rewardKey) -> (uint256 index, uint256 emissionPerSecond, uint256 lastUpdateTimestamp)`
+  Version: 0.0.1
+  Purpose: return reward market state for one asset/rewardType key.
+  Inputs: `rewardKey`: `keccak256(abi.encode(asset, rewardType))`.
+  Output: index, emission speed, and last update timestamp.
+
+- `userIndex(bytes32 rewardKey, address user) -> uint256`
+  Version: 0.0.1
+  Purpose: return the reward index last observed by one user for one reward market.
+  Inputs: `rewardKey`: reward market key. `user`: wallet address.
+  Output: user reward index.
+
+- `unclaimedRewards(address user) -> uint256`
+  Version: 0.0.1
+  Purpose: return currently accrued but unclaimed POOL rewards for one user.
+  Inputs: `user`: wallet address.
+  Output: POOL token amount.
+
+### Public Functions
+
+- `setActionHandler(address newHandler)` (only owner)
+  Version: 0.0.1
+  Purpose: update the contract allowed to report reward actions.
+  Inputs: `newHandler`: contract address.
+  Output: none.
+
+- `configureReward(address asset, uint8 rewardType, uint256 emissionPerSecond)` (only owner)
+  Version: 0.0.1
+  Purpose: configure reward emission speed for one asset and reward type.
+  Inputs: `asset`: reserve asset. `rewardType`: reward market type. `emissionPerSecond`: POOL emission speed.
+  Output: none.
+
+- `handleAction(address user, address asset, uint8 rewardType, uint256 totalPrincipal, uint256 userPrincipal)`
+  Version: 0.0.1
+  Purpose: accrue rewards for one user in one reward market using the current principal state.
+  Inputs: `user`: target user. `asset`: reserve asset. `rewardType`: reward market type. `totalPrincipal`: total tracked principal. `userPrincipal`: user tracked principal.
+  Output: none.
+
+- `claimRewards(address to) -> uint256`
+  Version: 0.0.1
+  Purpose: claim all currently accrued POOL rewards for `msg.sender`.
+  Inputs: `to`: reward receiver address.
+  Output: claimed POOL amount.
+
+---
+
 ## AToken (Reserve aToken)
 
 File: `contracts/AToken.sol`
@@ -250,6 +396,18 @@ File: `contracts/LendingPool.sol`
   Purpose: return the denominator for basis point calculations.
   Output: constant `10_000`.
 
+- `DEPOSIT_REWARD_TYPE() -> uint8`
+  Version: 0.0.1
+  Purpose: return the reward type id used when reporting deposit-side reward actions.
+  Inputs: none.
+  Output: constant `0`.
+
+- `BORROW_REWARD_TYPE() -> uint8`
+  Version: 0.0.1
+  Purpose: return the reward type id used when reporting borrow-side reward actions.
+  Inputs: none.
+  Output: constant `1`.
+
 ### Getters
 
 #### State
@@ -269,12 +427,18 @@ File: `contracts/LendingPool.sol`
   Inputs: none.
   Output: next debtVault id.
 
+- `poolIncentivesController() -> address`
+  Version: 0.0.1
+  Purpose: return the incentives controller linked to the lending pool.
+  Inputs: none.
+  Output: controller address.
+
 #### Reserve
 
 - `reserves(address asset) -> (...)`
   Purpose: return reserve configuration and accounting fields for one asset.
   Inputs: `asset`: reserve asset address.
-  Output: reserve flags, thresholds, indexes, aToken address, and rate model address.
+  Output: reserve flags, thresholds, total borrows, total debt principal, indexes, aToken address, and rate model address.
 
 - `isReserveAsset(address asset) -> bool`
   Purpose: return whether an asset has been registered as a reserve.
@@ -370,6 +534,18 @@ File: `contracts/LendingPool.sol`
   Inputs: `user`: wallet address. `asset`: reserve asset.
   Output: debt amount.
 
+- `getUserDebtPrincipal(address user, address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return the user's aggregated debt principal for one asset across all debtVaults.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: debt principal.
+
+- `getUserDebtAmount(address user, address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return debt amount reconstructed from the user's aggregated debt principal.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: debt amount.
+
 ### Public Functions
 
 #### Reserve Management (only owner)
@@ -392,6 +568,12 @@ File: `contracts/LendingPool.sol`
 - `setOracle(address newOracle)`
   Purpose: update the oracle contract.
   Inputs: `newOracle`: oracle address.
+  Output: none.
+
+- `setPoolIncentivesController(address newController)`
+  Version: 0.0.1
+  Purpose: update the incentives controller contract used by the lending pool.
+  Inputs: `newController`: controller address.
   Output: none.
 
 - `setLiquidationBonus(uint256 _bonus)`

@@ -24,7 +24,7 @@ Bonus:
   - [ ] Liquidation Spread/Bonus
 - [ ] Flash Loan
 - [ ] Real Oracle
-- [ ] Advanced tokenomics: issue a governance token (like COMP or AAVE) as a reward for lenders/borrowers (liquidity mining)
+- [x] Advanced tokenomics: issue a governance token (like COMP or AAVE) as a reward for lenders/borrowers (liquidity mining)
 - [ ] ~~Analytics & UX~~
 
 ---

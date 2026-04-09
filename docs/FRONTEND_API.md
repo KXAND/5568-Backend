@@ -80,6 +80,70 @@ Files:
 
 ---
 
+## PoolCoin
+
+File: `contracts/token/PoolCoin.sol`
+
+pure ERC-20 token, the governance toekn of the lending pool.
+
+### Getters
+
+- `balanceOf(address account) -> uint256`
+  Version: 0.0.1
+  Purpose: return the POOL balance of an account.
+  Inputs: `account`: wallet address.
+  Output: token balance.
+
+- `allowance(address owner, address spender) -> uint256`
+  Version: 0.0.1
+  Purpose: return how many POOL tokens `spender` is allowed to spend from `owner`.
+  Inputs: `owner`: token owner address. `spender`: approved spender address.
+  Output: allowance amount.
+
+### Public Functions
+
+- `approve(address spender, uint256 amount) -> bool`
+  Version: 0.0.1
+  Purpose: allow another address to spend the caller's POOL tokens.
+  Inputs: `spender`: approved address. `amount`: token amount.
+  Output: `true` if approval succeeds.
+
+- `transfer(address to, uint256 amount) -> bool`
+  Version: 0.0.1
+  Purpose: send POOL tokens from the caller to another address.
+  Inputs: `to`: receiver address. `amount`: token amount.
+  Output: `true` if transfer succeeds.
+
+---
+
+## PoolIncentivesController
+
+File: `contracts/incentives/PoolIncentivesController.sol`
+
+### Getters
+
+- `poolToken() -> address`
+  Version: 0.0.1
+  Purpose: return the POOL token contract used for rewards.
+  Inputs: none.
+  Output: token address.
+
+- `unclaimedRewards(address user) -> uint256`
+  Version: 0.0.1
+  Purpose: return currently accrued but unclaimed POOL rewards for one user.
+  Inputs: `user`: wallet address.
+  Output: POOL token amount.
+
+### Public Functions
+
+- `claimRewards(address to) -> uint256`
+  Version: 0.0.1
+  Purpose: claim all currently accrued POOL rewards for `msg.sender`.
+  Inputs: `to`: reward receiver address.
+  Output: claimed POOL amount.
+
+---
+
 ## AToken
 
 File: `contracts/AToken.sol`
@@ -210,6 +274,12 @@ File: `contracts/LendingPool.sol`
   Inputs: none.
   Output: next debtVault id.
 
+- `poolIncentivesController() -> address`
+  Version: 0.0.1
+  Purpose: return the incentives controller linked to the lending pool.
+  Inputs: none.
+  Output: controller address.
+
 #### Reserve
 
 - `getReserveAssets() -> address[]`
@@ -315,6 +385,18 @@ File: `contracts/LendingPool.sol`
 - `getUserDebtBalance(address user, address asset) -> uint256`
   Version: 0.0.1
   Purpose: return total debt of one asset across all debtVaults owned by the user.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: debt amount.
+
+- `getUserDebtPrincipal(address user, address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return the user's aggregated debt principal for one reserve asset across all debtVaults.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: principal amount normalized by the current borrow index model.
+
+- `getUserDebtAmount(address user, address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return the debt amount reconstructed from the user's aggregated debt principal for one reserve asset.
   Inputs: `user`: wallet address. `asset`: reserve asset.
   Output: debt amount.
 
@@ -439,6 +521,7 @@ File: `contracts/LendingPool.sol`
 - `deposit`, `repay`, and `liquidate` require ERC20 approval on the asset token first.
 - `depositCollateral`, `withdraw`, and `withdrawCollateral` do not require ERC20 approval.
 - `withdraw` still depends on available reserve liquidity.
+- `withdraw` and `repay` now also trigger reward accrual updates in `PoolIncentivesController` before the underlying balance changes.
 - `depositCollateral` and `withdrawCollateral` only move deposited aToken shares in and out of a debtVault. They do not transfer the asset token directly.
 - Claimed wallet-held aTokens are not used as active collateral until the user explicitly sends them back with `recustodyAToken`.
 - Only claimable custodied aToken shares can be sent out with `claimAToken`.
