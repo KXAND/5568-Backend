@@ -77,6 +77,45 @@ library ReserveLogic {
         return (principal * reserve.borrowIndex) / index;
     }
 
+    function getDeltaPrincipal(
+        LendingPoolTypes.Reserve storage reserve,
+        uint256 prevAmount,
+        uint256 currAmount,
+        uint256 ray
+    ) internal view returns (uint256 deltaPrincipal) {
+        uint256 prevPrincipal = principalFromDebtAmount(
+            reserve,
+            prevAmount,
+            ray
+        );
+
+        uint256 currPrincipal = principalFromDebtAmount(
+            reserve,
+            currAmount,
+            ray
+        );
+
+        deltaPrincipal = prevPrincipal > currPrincipal
+            ? prevPrincipal - currPrincipal
+            : currPrincipal - prevPrincipal;
+    }
+
+    function principalFromDebtAmount(
+        LendingPoolTypes.Reserve storage reserve,
+        uint256 amount,
+        uint256 ray
+    ) internal view returns (uint256) {
+        return (amount * ray) / reserve.borrowIndex;
+    }
+
+    function debtAmountFromPrincipal(
+        LendingPoolTypes.Reserve storage reserve,
+        uint256 principal,
+        uint256 ray
+    ) external view returns (uint256) {
+        return (principal * reserve.borrowIndex) / ray;
+    }
+
     function sharesFromAssetAmount(
         LendingPoolTypes.Reserve storage reserve,
         uint256 amount,

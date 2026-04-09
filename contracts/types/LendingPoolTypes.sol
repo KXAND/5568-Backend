@@ -35,6 +35,7 @@ library LendingPoolTypes {
         uint256 ltv;
         uint256 liquidationThreshold;
         uint256 totalBorrows;
+        uint256 totalDebtPrincipal;
         uint256 borrowIndex;
         uint256 liquidityIndex;
         uint256 lastAccrualBlock;

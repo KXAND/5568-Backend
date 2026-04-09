@@ -49,6 +49,7 @@ library ConfigLogic {
         reserve.ltv = params.ltv;
         reserve.liquidationThreshold = params.liquidationThreshold;
         reserve.totalBorrows = 0;
+        reserve.totalDebtPrincipal = 0;
         reserve.borrowIndex = ray;
         reserve.liquidityIndex = ray;
         reserve.lastAccrualBlock = block.number;

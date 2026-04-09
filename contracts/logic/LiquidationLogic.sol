@@ -28,6 +28,7 @@ library LiquidationLogic {
         mapping(uint256 => LendingPoolTypes.DebtVault) storage debtVaults,
         mapping(address => mapping(address => uint256)) storage custodiedShares,
         mapping(address => mapping(address => uint256)) storage lockedShares,
+        mapping(address => mapping(address => uint256)) storage userDebtPrincipal,
         SimpleOracle oracle,
         LendingPoolTypes.LiquidationParams memory params
     )
@@ -84,8 +85,19 @@ library LiquidationLogic {
         // interact
         debtReserve.totalBorrows -= actualRepayAmount;
         debtVault.borrowedPrincipal[params.debtAsset] =
-            principal - actualRepayAmount;
+            principal -
+            actualRepayAmount;
         debtVault.borrowedIndex[params.debtAsset] = debtReserve.borrowIndex;
+        uint256 principalRepaid = ReserveLogic.getDeltaPrincipal(
+            debtReserve,
+            principal,
+            principal - actualRepayAmount,
+            params.ray
+        );
+        debtReserve.totalDebtPrincipal -= principalRepaid;
+        userDebtPrincipal[debtVault.borrower][
+            params.debtAsset
+        ] -= principalRepaid;
         debtVault.collateralShares[
             params.collateralAsset
         ] -= actualTransferredShares;

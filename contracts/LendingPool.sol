@@ -44,6 +44,7 @@ contract LendingPool is Ownable {
 
     mapping(address => mapping(address => uint256)) private custodiedShares;
     mapping(address => mapping(address => uint256)) private lockedShares;
+    mapping(address => mapping(address => uint256)) private userDebtPrincipal;
     event ReserveConfigUpdated(
         address indexed asset,
         bool canBeCollateral,
@@ -197,6 +198,7 @@ contract LendingPool is Ownable {
             debtVaults,
             custodiedShares,
             lockedShares,
+            userDebtPrincipal,
             oracle,
             params
         );
@@ -341,10 +343,12 @@ contract LendingPool is Ownable {
             debtVaults,
             borrowedAssetsInDebtVault,
             isBorrowedAssetInDebtVault,
+            userDebtPrincipal,
             debtVaultId,
             asset,
             amount,
-            _availableLiquidity(asset)
+            _availableLiquidity(asset),
+            RAY
         );
         DebtVaultLogic.requireDebtWithinLimits(
             debtVaults,
@@ -372,9 +376,11 @@ contract LendingPool is Ownable {
         uint256 repayAmount = BorrowLogic.executeRepay(
             reserves,
             debtVaults,
+            userDebtPrincipal,
             debtVaultId,
             asset,
-            amount
+            amount,
+            RAY
         );
         _updateDebtVaultHealthFactor(debtVaultId);
 
@@ -564,6 +570,26 @@ contract LendingPool is Ownable {
                 reserve
             );
         }
+    }
+
+    function getUserDebtPrincipal(
+        address user,
+        address asset
+    ) external view returns (uint256) {
+        return userDebtPrincipal[user][asset];
+    }
+
+    function getUserDebtAmount(
+        address user,
+        address asset
+    ) external view returns (uint256) {
+        LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
+        return
+            ReserveLogic.debtAmountFromPrincipal(
+                reserve,
+                userDebtPrincipal[user][asset],
+                RAY
+            );
     }
 
     function _accrueInterest(

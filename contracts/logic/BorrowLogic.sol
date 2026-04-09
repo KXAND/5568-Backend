@@ -36,10 +36,12 @@ library BorrowLogic {
         mapping(uint256 => LendingPoolTypes.DebtVault) storage debtVaults,
         mapping(uint256 => address[]) storage borrowedAssetsInDebtVault,
         mapping(uint256 => mapping(address => bool)) storage isBorrowedAssetInDebtVault,
+        mapping(address => mapping(address => uint256)) storage userDebtPrincipal,
         uint256 debtVaultId,
         address asset,
         uint256 amount,
-        uint256 assetCash
+        uint256 assetCash,
+        uint256 ray
     ) external {
         require(amount > 0, "LendingPool: amount=0");
         LendingPoolTypes.Reserve storage reserve = reserves[asset];
@@ -53,10 +55,18 @@ library BorrowLogic {
             asset,
             reserve
         );
+        uint256 principalAdded = ReserveLogic.getDeltaPrincipal(
+            reserve,
+            currentDebt,
+            currentDebt + amount,
+            ray
+        );
 
         reserve.totalBorrows += amount;
+        reserve.totalDebtPrincipal += principalAdded;
         debtVault.borrowedIndex[asset] = reserve.borrowIndex;
         debtVault.borrowedPrincipal[asset] = currentDebt + amount;
+        userDebtPrincipal[debtVault.borrower][asset] += principalAdded;
 
         if (!isBorrowedAssetInDebtVault[debtVaultId][asset]) {
             isBorrowedAssetInDebtVault[debtVaultId][asset] = true;
@@ -67,9 +77,11 @@ library BorrowLogic {
     function executeRepay(
         mapping(address => LendingPoolTypes.Reserve) storage reserves,
         mapping(uint256 => LendingPoolTypes.DebtVault) storage debtVaults,
+        mapping(address => mapping(address => uint256)) storage userDebtPrincipal,
         uint256 debtVaultId,
         address asset,
-        uint256 amount
+        uint256 amount,
+        uint256 ray
     ) external returns (uint256 repayAmount) {
         require(amount > 0, "LendingPool: amount=0");
         LendingPoolTypes.Reserve storage reserve = reserves[asset];
@@ -85,8 +97,16 @@ library BorrowLogic {
 
         repayAmount = amount > currentDebt ? currentDebt : amount;
 
+        uint256 principalRepaid = ReserveLogic.getDeltaPrincipal(
+            reserve,
+            currentDebt,
+            currentDebt - repayAmount,
+            ray
+        );
         reserve.totalBorrows -= repayAmount;
+        reserve.totalDebtPrincipal -= principalRepaid;
         debtVault.borrowedPrincipal[asset] = currentDebt - repayAmount;
         debtVault.borrowedIndex[asset] = reserve.borrowIndex;
+        userDebtPrincipal[debtVault.borrower][asset] -= principalRepaid;
     }
 }

@@ -147,7 +147,7 @@ contract FlashLoanBot is IFlashLoanReceiver {
         address asset,
         uint256 shares
     ) internal view returns (uint256 amount) {
-        (, , , , , , , uint256 liquidityIndex, , , ) = lendingPool.reserves(
+        (, , , , , , , , uint256 liquidityIndex, , , ) = lendingPool.reserves(
             asset
         );
         amount = (shares * liquidityIndex) / lendingPool.RAY();
