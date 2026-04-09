@@ -33,6 +33,12 @@ type RunIncentivesDemoParams = {
     borrowAmount: bigint,
     publicClient: any
   ) => Promise<bigint>;
+  collateralAmount?: bigint;
+  borrowAmount?: bigint;
+  withdrawAmount?: bigint;
+  withdrawWaitSeconds?: number;
+  repayAmount?: bigint;
+  repayWaitSeconds?: number;
 };
 
 async function increaseTime(publicClient: any, seconds: number) {
@@ -56,6 +62,12 @@ export async function runIncentivesDemo(params: RunIncentivesDemoParams) {
     waitForReceipt,
     setPrices,
     createDebtVault,
+    collateralAmount = 100n * one,
+    borrowAmount = 10n * one,
+    withdrawAmount = 1n * one,
+    withdrawWaitSeconds = 60,
+    repayAmount = 1n * one,
+    repayWaitSeconds = 60,
   } = params;
 
   const poolCoin = await viem.getContractAt("PoolCoin", deployed.poolCoin);
@@ -93,17 +105,16 @@ export async function runIncentivesDemo(params: RunIncentivesDemoParams) {
   );
 
   const withdrawUser = ownerAddress;
-  const withdrawAmount = 1n * one;
   const depositBefore = await incentives.read.unclaimedRewards([withdrawUser]);
 
-  await increaseTime(publicClient, 60);
+  await increaseTime(publicClient, withdrawWaitSeconds);
   await waitForReceipt(
     publicClient,
     await pool.write.withdraw([aliceToken.address, withdrawAmount], {
       account: withdrawUser,
     })
   );
-  await increaseTime(publicClient, 60);
+  await increaseTime(publicClient, withdrawWaitSeconds);
   await waitForReceipt(
     publicClient,
     await pool.write.withdraw([aliceToken.address, withdrawAmount], {
@@ -135,13 +146,12 @@ export async function runIncentivesDemo(params: RunIncentivesDemoParams) {
     pool,
     bobToken,
     { account: { address: borrowerAddress } },
-    100n * one,
+    collateralAmount,
     aliceToken.address,
-    10n * one,
+    borrowAmount,
     publicClient
   );
 
-  const repayAmount = 1n * one;
   await waitForReceipt(
     publicClient,
     await aliceToken.write.approve([pool.address, 2n * repayAmount], {
@@ -150,14 +160,14 @@ export async function runIncentivesDemo(params: RunIncentivesDemoParams) {
   );
 
   const repayBefore = await incentives.read.unclaimedRewards([borrowerAddress]);
-  await increaseTime(publicClient, 60);
+  await increaseTime(publicClient, repayWaitSeconds);
   await waitForReceipt(
     publicClient,
     await pool.write.repay([repayVaultId, aliceToken.address, repayAmount], {
       account: borrowerAddress,
     })
   );
-  await increaseTime(publicClient, 60);
+  await increaseTime(publicClient, repayWaitSeconds);
   await waitForReceipt(
     publicClient,
     await pool.write.repay([repayVaultId, aliceToken.address, repayAmount], {
@@ -205,4 +215,15 @@ export async function runIncentivesDemo(params: RunIncentivesDemoParams) {
     ", after =",
     borrowerPoolAfter.toString()
   );
+
+  return {
+    depositBefore,
+    depositAfter,
+    repayBefore,
+    repayAfter,
+    ownerPoolBefore,
+    ownerPoolAfter,
+    borrowerPoolBefore,
+    borrowerPoolAfter,
+  };
 }

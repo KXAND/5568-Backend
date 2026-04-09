@@ -1,0 +1,107 @@
+{
+  "label": "Complete Alice-collateral Bob-borrow liquidation walkthrough",
+  "network": "hardhatMainnet",
+  "setup": {
+    "initialAlicePrice": "100",
+    "initialBobPrice": "1",
+    "reserveAlice": "0",
+    "reserveBob": "5000",
+    "flashAlice": "0",
+    "flashBob": "1000",
+    "swapAlice": "100",
+    "swapBob": "10000",
+    "swapExchangeRate": "0.01",
+    "claimAliceFaucetFor": ["A", "B", "C", "D"],
+    "claimBobFaucetFor": ["A", "B", "C", "D"],
+    "aliceReserveConfig": {
+      "canBeCollateral": true,
+      "canBeBorrowed": false,
+      "ltv": "0.75",
+      "liquidationThreshold": "0.85"
+    },
+    "bobReserveConfig": {
+      "canBeCollateral": false,
+      "canBeBorrowed": true,
+      "ltv": "0",
+      "liquidationThreshold": "0"
+    }
+  },
+  "scenarios": [
+    {
+      "type": "borrow-health",
+      "name": "Part 1: Deposit Alice, collateralize, and borrow Bob",
+      "borrower": "B",
+      "collateralAsset": "alice",
+      "borrowAsset": "bob",
+      "collateralAmount": "2",
+      "borrowAmount": "60",
+      "healthyAlicePrice": "100",
+      "healthyBobPrice": "1",
+      "expect": {
+        "finalHealthFactorAtLeast": "2.8"
+      }
+    },
+    {
+      "type": "direct-liquidation",
+      "name": "Part 2: Price drop to liquidation zone and direct liquidation",
+      "borrower": "B",
+      "liquidator": "A",
+      "collateralAsset": "alice",
+      "borrowAsset": "bob",
+      "collateralAmount": "2",
+      "borrowAmount": "100",
+      "healthyAlicePrice": "100",
+      "healthyBobPrice": "1",
+      "priceAfterAlice": "50",
+      "priceAfterBob": "1",
+      "repayAmount": "100",
+      "expect": {
+        "healthFactorBelow": "1",
+        "debtReduced": true,
+        "seizedSharesPositive": true
+      }
+    },
+    {
+      "type": "flash-liquidation",
+      "name": "Part 3: Flash-loan liquidation after the same style of price drop",
+      "borrower": "C",
+      "caller": "A",
+      "collateralAsset": "alice",
+      "borrowAsset": "bob",
+      "collateralAmount": "2",
+      "borrowAmount": "100",
+      "healthyAlicePrice": "100",
+      "healthyBobPrice": "1",
+      "priceAfterAlice": "50",
+      "priceAfterBob": "1",
+      "flashBorrowAmount": "100",
+      "verboseLogs": true,
+      "expect": {
+        "healthFactorBelow": "1",
+        "debtReduced": true,
+        "poolFeeEarned": true
+      }
+    },
+    {
+      "type": "multi-flash-liquidation",
+      "name": "Part 4: Multiple flash liquidations and borrower exits with remaining collateral",
+      "borrower": "D",
+      "caller": "A",
+      "collateralAsset": "alice",
+      "borrowAsset": "bob",
+      "collateralAmount": "2",
+      "borrowAmount": "90",
+      "healthyAlicePrice": "100",
+      "healthyBobPrice": "1",
+      "priceAfterAlice": "50",
+      "priceAfterBob": "1",
+      "maxIterations": 10,
+      "exitPositionAfterRecovery": true,
+      "expect": {
+        "finalHealthFactorAtLeast": "1",
+        "remainingDebtCleared": true,
+        "borrowerRecoveredCollateral": true
+      }
+    }
+  ]
+}
