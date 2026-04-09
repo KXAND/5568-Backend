@@ -166,7 +166,7 @@ Rules for the data file:
 - `priceAfter`: legacy shorthand for changing the Bob price only.
 - `flashBorrowAmount`: how much of the debt asset the flash-loan bot borrows for liquidation.
 - `maxIterations`: upper bound for repeated flash-liquidation attempts.
-- `exitPositionAfterRecovery`: after the vault becomes healthy again, let the borrower repay the remaining debt and withdraw the remaining collateral.
+- `exitPositionAfterRecovery`: after the scenario reaches its final position state, let the borrower repay any remaining debt and withdraw any remaining collateral. This works for normal borrow-health flows as well as liquidation flows.
 - `expect`: assertion settings for that step, such as minimum health factor, whether debt must go down, or whether rewards must increase.
 
 ### Setup Section Explanation

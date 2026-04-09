@@ -52,6 +52,7 @@ type DirectLiquidationScenario = {
   name: string;
   borrower: WalletAlias;
   liquidator?: WalletAlias;
+  exitPositionAfterRecovery?: boolean;
   collateralAsset?: AssetAlias;
   borrowAsset?: AssetAlias;
   collateralAmount?: AmountInput;
@@ -72,6 +73,7 @@ type BorrowHealthScenario = {
   type: "borrow-health";
   name: string;
   borrower: WalletAlias;
+  exitPositionAfterRecovery?: boolean;
   collateralAsset?: AssetAlias;
   borrowAsset?: AssetAlias;
   collateralAmount?: AmountInput;
@@ -88,6 +90,7 @@ type FlashLiquidationScenario = {
   name: string;
   borrower: WalletAlias;
   caller?: WalletAlias;
+  exitPositionAfterRecovery?: boolean;
   collateralAsset?: AssetAlias;
   borrowAsset?: AssetAlias;
   collateralAmount?: AmountInput;
@@ -469,6 +472,86 @@ async function executeFlashLiquidation(
   };
 }
 
+async function exitBorrowerPosition(
+  step: {
+    name: string;
+    exitPositionAfterRecovery?: boolean;
+    expect?: ScenarioExpect;
+  },
+  ctx: ScenarioContext,
+  borrowerAddress: `0x${string}`,
+  vaultId: bigint,
+  borrowToken: any,
+  collateralToken: any,
+  borrowAsset: AssetAlias,
+  collateralAsset: AssetAlias
+) {
+  if (!step.exitPositionAfterRecovery) {
+    return;
+  }
+
+  const borrowerCollateralBefore = await collateralToken.read.balanceOf([borrowerAddress]);
+  const debtBeforeExit = await ctx.pool.read.getDebtVaultDebtAmount([vaultId, borrowToken.address]);
+  let remainingDebt = debtBeforeExit;
+
+  for (let repayAttempt = 0; repayAttempt < 3 && remainingDebt > 0n; repayAttempt += 1) {
+    const borrowerDebtTokenBalance = await borrowToken.read.balanceOf([borrowerAddress]);
+    assertCondition(
+      borrowerDebtTokenBalance > 0n,
+      `${step.name}: borrower has no debt-token balance left to close the position`
+    );
+
+    await waitForReceipt(
+      ctx.publicClient,
+      await borrowToken.write.approve([ctx.pool.address, borrowerDebtTokenBalance], { account: borrowerAddress })
+    );
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.pool.write.repay([vaultId, borrowToken.address, borrowerDebtTokenBalance], {
+        account: borrowerAddress,
+      })
+    );
+
+    remainingDebt = await ctx.pool.read.getDebtVaultDebtAmount([vaultId, borrowToken.address]);
+  }
+
+  const debtAfterRepay = await ctx.pool.read.getDebtVaultDebtAmount([vaultId, borrowToken.address]);
+  const remainingCollateral = await ctx.pool.read.getDebtVaultCollateralAssetAmount([vaultId, collateralToken.address]);
+
+  if (remainingCollateral > 0n) {
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.pool.write.withdrawCollateral([vaultId, collateralToken.address, remainingCollateral], {
+        account: borrowerAddress,
+      })
+    );
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.pool.write.withdraw([collateralToken.address, remainingCollateral], { account: borrowerAddress })
+    );
+  }
+
+  const borrowerCollateralAfter = await collateralToken.read.balanceOf([borrowerAddress]);
+  const collateralAfterExit = await ctx.pool.read.getDebtVaultCollateralAssetAmount([vaultId, collateralToken.address]);
+
+  console.log("Borrower repaid remaining debt:", formatToken(debtBeforeExit), getAssetSymbol(borrowAsset));
+  console.log("Borrower withdrew remaining collateral:", formatToken(remainingCollateral), getAssetSymbol(collateralAsset));
+
+  if (step.expect?.remainingDebtCleared !== false) {
+    assertCondition(debtAfterRepay === 0n, `${step.name}: remaining debt was not fully cleared`);
+  }
+  if (step.expect?.borrowerRecoveredCollateral !== false) {
+    assertCondition(
+      borrowerCollateralAfter > borrowerCollateralBefore,
+      `${step.name}: borrower did not recover collateral balance`
+    );
+    assertCondition(
+      collateralAfterExit === 0n,
+      `${step.name}: collateral still remains in the vault after exit`
+    );
+  }
+}
+
 async function buildContext(networkName: string) {
   const { viem } = await network.connect({ network: networkName });
   const publicClient = await viem.getPublicClient();
@@ -658,6 +741,7 @@ async function runDirectLiquidation(step: DirectLiquidationScenario, ctx: Scenar
   printSection(step.name);
 
   const borrower = resolveWalletAlias(step.borrower, "B", ctx);
+  const borrowerAddress = borrower.account.address;
   const liquidatorAddress = resolveWalletAlias(step.liquidator, "A", ctx).account.address;
   const collateralAsset = resolveCollateralAsset(step);
   const borrowAsset = resolveBorrowAsset(step);
@@ -725,12 +809,24 @@ async function runDirectLiquidation(step: DirectLiquidationScenario, ctx: Scenar
   if (step.expect?.seizedSharesPositive !== false) {
     assertCondition(seizedShares > 0n, `${step.name}: no collateral shares were seized`);
   }
+
+  await exitBorrowerPosition(
+    step,
+    ctx,
+    borrowerAddress,
+    vaultId,
+    borrowToken,
+    collateralToken,
+    borrowAsset,
+    collateralAsset
+  );
 }
 
 async function runBorrowHealth(step: BorrowHealthScenario, ctx: ScenarioContext) {
   printSection(step.name);
 
   const borrower = resolveWalletAlias(step.borrower, "B", ctx);
+  const borrowerAddress = borrower.account.address;
   const collateralAsset = resolveCollateralAsset(step);
   const borrowAsset = resolveBorrowAsset(step);
   const collateralAmount = resolveCollateralAmount(step);
@@ -762,12 +858,24 @@ async function runBorrowHealth(step: BorrowHealthScenario, ctx: ScenarioContext)
   const state = await logVaultState(ctx.pool, vaultId, borrowToken.address, "Borrowed vault state");
   assertCondition(state.debt > 0n, `${step.name}: vault debt was not created`);
   assertCondition(state.hf >= hfTarget, `${step.name}: health factor is below expected threshold`);
+
+  await exitBorrowerPosition(
+    step,
+    ctx,
+    borrowerAddress,
+    vaultId,
+    borrowToken,
+    collateralToken,
+    borrowAsset,
+    collateralAsset
+  );
 }
 
 async function runFlashLiquidation(step: FlashLiquidationScenario, ctx: ScenarioContext) {
   printSection(step.name);
 
   const borrower = resolveWalletAlias(step.borrower, "C", ctx);
+  const borrowerAddress = borrower.account.address;
   const callerAddress = resolveWalletAlias(step.caller, "A", ctx).account.address;
   const collateralAsset = resolveCollateralAsset(step);
   const borrowAsset = resolveBorrowAsset(step);
@@ -840,6 +948,17 @@ async function runFlashLiquidation(step: FlashLiquidationScenario, ctx: Scenario
       `${step.name}: flash pool did not earn fees`
     );
   }
+
+  await exitBorrowerPosition(
+    step,
+    ctx,
+    borrowerAddress,
+    vaultId,
+    borrowToken,
+    collateralToken,
+    borrowAsset,
+    collateralAsset
+  );
 }
 
 async function runMultiFlashLiquidation(step: MultiFlashLiquidationScenario, ctx: ScenarioContext) {
@@ -922,68 +1041,16 @@ async function runMultiFlashLiquidation(step: MultiFlashLiquidationScenario, ctx
   console.log("Vault restored healthy after", iteration, "flash liquidations");
   console.log("Final healthy HF:", formatToken(state.hf));
 
-  if (step.exitPositionAfterRecovery) {
-    const borrowerCollateralBefore = await collateralToken.read.balanceOf([borrowerAddress]);
-    const debtBeforeExit = await ctx.pool.read.getDebtVaultDebtAmount([vaultId, borrowToken.address]);
-    let remainingDebt = debtBeforeExit;
-
-    for (let repayAttempt = 0; repayAttempt < 3 && remainingDebt > 0n; repayAttempt += 1) {
-      const borrowerDebtTokenBalance = await borrowToken.read.balanceOf([borrowerAddress]);
-      assertCondition(
-        borrowerDebtTokenBalance > 0n,
-        `${step.name}: borrower has no debt-token balance left to close the position`
-      );
-
-      await waitForReceipt(
-        ctx.publicClient,
-        await borrowToken.write.approve([ctx.pool.address, borrowerDebtTokenBalance], { account: borrowerAddress })
-      );
-      await waitForReceipt(
-        ctx.publicClient,
-        await ctx.pool.write.repay([vaultId, borrowToken.address, borrowerDebtTokenBalance], {
-          account: borrowerAddress,
-        })
-      );
-
-      remainingDebt = await ctx.pool.read.getDebtVaultDebtAmount([vaultId, borrowToken.address]);
-    }
-
-    const debtAfterRepay = await ctx.pool.read.getDebtVaultDebtAmount([vaultId, borrowToken.address]);
-    const remainingCollateral = await ctx.pool.read.getDebtVaultCollateralAssetAmount([vaultId, collateralToken.address]);
-
-    if (remainingCollateral > 0n) {
-      await waitForReceipt(
-        ctx.publicClient,
-        await ctx.pool.write.withdrawCollateral([vaultId, collateralToken.address, remainingCollateral], {
-          account: borrowerAddress,
-        })
-      );
-      await waitForReceipt(
-        ctx.publicClient,
-        await ctx.pool.write.withdraw([collateralToken.address, remainingCollateral], { account: borrowerAddress })
-      );
-    }
-
-    const borrowerCollateralAfter = await collateralToken.read.balanceOf([borrowerAddress]);
-    const collateralAfterExit = await ctx.pool.read.getDebtVaultCollateralAssetAmount([vaultId, collateralToken.address]);
-
-    console.log("Borrower repaid remaining debt:", formatToken(debtBeforeExit), getAssetSymbol(borrowAsset));
-    console.log("Borrower withdrew remaining collateral:", formatToken(remainingCollateral), getAssetSymbol(collateralAsset));
-
-    if (step.expect?.remainingDebtCleared !== false) {
-      assertCondition(debtAfterRepay === 0n, `${step.name}: remaining debt was not fully cleared`);
-    }
-    if (step.expect?.borrowerRecoveredCollateral !== false) {
-      assertCondition(
-        borrowerCollateralAfter > borrowerCollateralBefore,
-        `${step.name}: borrower did not recover collateral balance`
-      );
-      assertCondition(
-        collateralAfterExit === 0n,
-        `${step.name}: collateral still remains in the vault after exit`
-      );
-    }
-  }
+  await exitBorrowerPosition(
+    step,
+    ctx,
+    borrowerAddress,
+    vaultId,
+    borrowToken,
+    collateralToken,
+    borrowAsset,
+    collateralAsset
+  );
 }
 
 async function runIncentivesScenario(step: IncentivesScenario, ctx: ScenarioContext) {
