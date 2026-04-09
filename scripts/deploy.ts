@@ -114,6 +114,23 @@ export async function deploy() {
     { client: { wallet: deployer } }
   );
 
+  const poolCoinTotalSupply = 1_919_810n * 10n ** 18n;
+  const poolCoin = await viem.deployContract(
+    "PoolCoin",
+    [deployer.account.address, poolCoinTotalSupply],
+    { client: { wallet: deployer } }
+  );
+
+  const poolIncentivesController = await viem.deployContract(
+    "PoolIncentivesController",
+    [poolCoin.address, pool.address, deployer.account.address],
+    { client: { wallet: deployer } }
+  );
+
+  await pool.write.setPoolIncentivesController([poolIncentivesController.address], {
+    account: deployer.account.address,
+  });
+
   console.log("ReserveLogic:", reserveLogic.address);
   console.log("DebtVaultLogic:", debtVaultLogic.address);
   console.log("ConfigLogic:", configLogic.address);
@@ -129,6 +146,8 @@ export async function deploy() {
   console.log("FlashLoanPool:", flashPool.address);
   console.log("FlashLoanSwap:", flashSwap.address);
   console.log("FlashLoanBot:", flashBot.address);
+  console.log("PoolCoin:", poolCoin.address);
+  console.log("PoolIncentivesController:", poolIncentivesController.address);
 
   return {
     reserveLogic: reserveLogic.address,
@@ -146,6 +165,8 @@ export async function deploy() {
     flashPool: flashPool.address,
     flashSwap: flashSwap.address,
     flashBot: flashBot.address,
+    poolCoin: poolCoin.address,
+    poolIncentivesController: poolIncentivesController.address,
   } as const;
 }
 

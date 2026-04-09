@@ -1,6 +1,7 @@
 import { parseEventLogs } from "viem";
 import { network } from "hardhat";
 import { deploy } from "./deploy.js";
+import { runIncentivesDemo } from "./scenarios/incentives.js";
 
 const ONE = 10n ** 18n;
 const BOB_PRICE_HEALTHY = 2n * ONE;
@@ -359,6 +360,24 @@ async function main() {
 
   console.log("Vault restored healthy after", iteration, "flash liquidations");
   console.log("Final healthy HF:", formatToken(multiState.hf));
+
+  printSection("Part 5: Pool Incentives Demo");
+  await runIncentivesDemo({
+    viem,
+    publicClient,
+    deployed,
+    pool,
+    oracle,
+    aliceToken,
+    bobToken,
+    borrowerClient: B,
+    ownerAddress: a,
+    one: ONE,
+    healthyBobPrice: BOB_PRICE_HEALTHY,
+    waitForReceipt,
+    setPrices,
+    createDebtVault,
+  });
 }
 
 main().catch((e) => {
