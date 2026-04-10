@@ -1,5 +1,5 @@
 {
-  "label": "Complete Alice-collateral Bob-borrow liquidation walkthrough",
+  "label": "Passable Alice-collateral Bob-borrow liquidation walkthrough",
   "network": "hardhatMainnet",
   "setup": {
     "initialAlicePrice": "100",
@@ -44,7 +44,7 @@
     },
     {
       "type": "direct-liquidation",
-      "name": "Part 2: Price drop to liquidation zone and direct liquidation",
+      "name": "Part 2: Direct liquidation with HF improvement",
       "borrower": "B",
       "liquidator": "A",
       "exitPositionAfterRecovery": true,
@@ -54,18 +54,19 @@
       "borrowAmount": "100",
       "healthyAlicePrice": "100",
       "healthyBobPrice": "1",
-      "priceAfterAlice": "50",
+      "priceAfterAlice": "55",
       "priceAfterBob": "1",
       "repayAmount": "100",
       "expect": {
         "healthFactorBelow": "1",
+        "healthFactorIncreased": true,
         "debtReduced": true,
         "seizedSharesPositive": true
       }
     },
     {
       "type": "flash-liquidation",
-      "name": "Part 3: Flash-loan liquidation after the same style of price drop",
+      "name": "Part 3: Flash liquidation with HF improvement",
       "borrower": "C",
       "caller": "A",
       "exitPositionAfterRecovery": true,
@@ -75,12 +76,13 @@
       "borrowAmount": "100",
       "healthyAlicePrice": "100",
       "healthyBobPrice": "1",
-      "priceAfterAlice": "50",
+      "priceAfterAlice": "55",
       "priceAfterBob": "1",
       "flashBorrowAmount": "100",
       "verboseLogs": true,
       "expect": {
         "healthFactorBelow": "1",
+        "healthFactorIncreased": true,
         "debtReduced": true,
         "poolFeeEarned": true
       }

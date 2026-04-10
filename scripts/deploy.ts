@@ -1,5 +1,5 @@
 import { network } from "hardhat";
-import { deploy } from "../test/scenarios/deploy.js";
+import { deploy } from "../test/test_qjh/scenarios/deploy.js";
 
 async function main() {
   const { viem } = await network.connect();

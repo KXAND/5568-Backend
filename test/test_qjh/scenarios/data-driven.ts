@@ -36,6 +36,7 @@ type SetupConfig = {
 type ScenarioExpect = {
   healthFactorBelow?: AmountInput;
   finalHealthFactorAtLeast?: AmountInput;
+  healthFactorIncreased?: boolean;
   debtReduced?: boolean;
   seizedSharesPositive?: boolean;
   poolFeeEarned?: boolean;
@@ -806,6 +807,9 @@ async function runDirectLiquidation(step: DirectLiquidationScenario, ctx: Scenar
   if (step.expect?.debtReduced !== false) {
     assertCondition(after.debt < before.debt, `${step.name}: debt was not reduced`);
   }
+  if (step.expect?.healthFactorIncreased === true) {
+    assertCondition(after.hf > before.hf, `${step.name}: health factor did not increase after liquidation`);
+  }
   if (step.expect?.seizedSharesPositive !== false) {
     assertCondition(seizedShares > 0n, `${step.name}: no collateral shares were seized`);
   }
@@ -941,6 +945,9 @@ async function runFlashLiquidation(step: FlashLiquidationScenario, ctx: Scenario
 
   if (step.expect?.debtReduced !== false) {
     assertCondition(after.debt < before.debt, `${step.name}: debt was not reduced`);
+  }
+  if (step.expect?.healthFactorIncreased === true) {
+    assertCondition(after.hf > before.hf, `${step.name}: health factor did not increase after liquidation`);
   }
   if (step.expect?.poolFeeEarned !== false) {
     assertCondition(

@@ -5,7 +5,7 @@ const networkName = process.argv[2] ?? "hardhatMainnet";
 const scenarioPath = process.argv[3] ? path.resolve(process.argv[3]) : undefined;
 
 const child = spawn(
-  `pnpm exec hardhat run scripts/scenarios/run.ts --network ${networkName}`,
+  `pnpm exec hardhat run test/test_qjh/scenarios/run.ts --network ${networkName}`,
   {
     shell: true,
     stdio: "inherit",
