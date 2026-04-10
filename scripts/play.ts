@@ -1,7 +1,7 @@
 import path from "node:path";
 import { network } from "hardhat";
 
-import { deploy } from "./scenarios/deploy.js";
+import { deploy } from "../test/scenarios/deploy.js";
 
 async function waitForReceipt(publicClient: any, hash: `0x${string}`) {
   await publicClient.waitForTransactionReceipt({ hash });

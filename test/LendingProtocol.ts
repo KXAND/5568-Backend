@@ -3,8 +3,8 @@ import { describe, it } from "node:test";
 
 import { network } from "hardhat";
 
-import { deploy } from "../scripts/scenarios/deploy.js";
-import { runIncentivesDemo } from "../scripts/scenarios/incentives.js";
+import { deploy } from "./scenarios/deploy.js";
+import { runIncentivesDemo } from "./scenarios/incentives.js";
 
 const ONE = 10n ** 18n;
 const BOB_PRICE_HEALTHY = 2n * ONE;

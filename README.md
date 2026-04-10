@@ -122,11 +122,11 @@ If you want to use a local node, start `pnpm exec hardhat node` first and then r
 pnpm run scenario:local -- path/to/your-scenario.json
 ```
 
-Sample data file: `scripts/scenarios/data/default.json`
+Sample data file: `test/scenarios/data/default.json`
 
-pnpm run scenario -- scripts/scenarios/data/default.json
+pnpm run scenario -- test/scenarios/data/default.json
 
-Default example flow in `scripts/scenarios/data/default.json`:
+Default example flow in `test/scenarios/data/default.json`:
 
 1. Deposit Alice into the pool.
 2. Use Alice as collateral.
