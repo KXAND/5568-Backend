@@ -435,6 +435,59 @@ contract LendingPool is Ownable {
             );
     }
 
+    struct LiquidationTable {
+        uint256 debtVaultId;
+        address borrower;
+        uint256 healthFactor;
+        uint256 debtValue;
+        uint256 collateralValue;
+    }
+
+    function getLiquidationTables()
+        external
+        view
+        returns (LiquidationTable[] memory)
+    {
+        uint256 totalCount = nextDebtVaultId - 1;
+        uint256[] memory candidateIds = new uint256[](totalCount);
+        uint256 candidateCount = 0;
+
+        for (uint256 i = 1; i < nextDebtVaultId; i++) {
+            if (debtVaults[i].active && healthFactor(i) < RAY) {
+                candidateIds[candidateCount] = i;
+                candidateCount++;
+            }
+        }
+
+        LiquidationTable[] memory candidates = new LiquidationTable[](
+            candidateCount
+        );
+        for (uint256 i = 0; i < candidateCount; i++) {
+            uint256 vaultId = candidateIds[i];
+            (
+                ,
+                uint256 liquidationThresholdValue,
+                uint256 debtValue
+            ) = DebtVaultLogic.getDebtVaultValues(
+                debtVaults,
+                debtVaultCollateralAssets,
+                borrowedAssetsInDebtVault,
+                reserves,
+                oracle,
+                vaultId,
+                RAY
+            );
+            candidates[i] = LiquidationTable({
+                debtVaultId: vaultId,
+                borrower: debtVaults[vaultId].borrower,
+                healthFactor: healthFactor(vaultId),
+                debtValue: debtValue,
+                collateralValue: liquidationThresholdValue
+            });
+        }
+        return candidates;
+    }
+
     function getOwnerDebtVaultIds(
         address owner_
     ) external view returns (uint256[] memory) {
