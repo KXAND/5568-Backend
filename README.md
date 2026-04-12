@@ -110,3 +110,9 @@ Then run a TypeScript script on localhost. For example:
 pnpm exec hardhat run scripts/play.ts --network localhost
 ```
 
+Or connect Remix to your local node:
+
+1. Open [Remix](https://remix.ethereum.org) or launch your Remix Desktop
+2. Open `Deploy & Run Transactions`
+3. Select `Dev - Hardhat Provider`
+4. If needed, set the URL to `http://127.0.0.1:8545`

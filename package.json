@@ -16,8 +16,8 @@
   },
   "scripts": {
     "node": "hardhat node",
-    "play": "hardhat run scripts/play.ts --network hardhatMainnet",
-    "play:local": "hardhat run scripts/play.ts --network localhost",
+    "play": "hardhat run --network hardhatMainnet",
+    "play:local": "hardhat run --network localhost",
     "test": "hardhat test",
     "test:nodejs": "hardhat test nodejs",
     "test:fast": "hardhat test --no-compile"
