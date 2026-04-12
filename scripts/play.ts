@@ -161,7 +161,7 @@ async function main() {
   const c = C.account.address;
   const d = D.account.address;
 
-  const deployed = await deploy();
+  const deployed = await deploy({ viem });
 
   const oracle = await viem.getContractAt("SimpleOracle", deployed.oracle);
   const aliceFaucet = await viem.getContractAt("AliceFaucet", deployed.aliceFaucet);
@@ -384,3 +384,4 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+

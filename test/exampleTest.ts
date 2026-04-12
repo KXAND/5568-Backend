@@ -14,7 +14,7 @@ describe("LendingPool Collateral Flow (integration)", async function () {
   let faucet: any;
 
   before(async () => {
-    const deployed = await deploy();
+    const deployed = await deploy({ viem });
 
     pool = await viem.getContractAt("LendingPool", deployed.pool);
     bob = await viem.getContractAt("BobToken", deployed.bobToken);

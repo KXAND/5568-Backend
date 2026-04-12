@@ -1,6 +1,3 @@
-import { fileURLToPath } from "node:url";
-import { network } from "hardhat";
-
 const LIBRARIES = {
   reserve: "project/contracts/logic/ReserveLogic.sol:ReserveLogic",
   debtVault: "project/contracts/logic/DebtVaultLogic.sol:DebtVaultLogic",
@@ -9,8 +6,13 @@ const LIBRARIES = {
   borrow: "project/contracts/logic/BorrowLogic.sol:BorrowLogic",
 } as const;
 
-export async function deploy() {
-  const { viem } = await network.connect({ network: "localhost" });
+type DeployOptions = {
+  viem: any;
+  log?: boolean;
+};
+
+export async function deploy(options: DeployOptions) {
+  const { viem, log = false } = options;
   const [deployer] = await viem.getWalletClients();
 
   const reserveLogic = await viem.deployContract("ReserveLogic", [], {
@@ -131,23 +133,25 @@ export async function deploy() {
     account: deployer.account.address,
   });
 
-  console.log("ReserveLogic:", reserveLogic.address);
-  console.log("DebtVaultLogic:", debtVaultLogic.address);
-  console.log("ConfigLogic:", configLogic.address);
-  console.log("DepositLogic:", depositLogic.address);
-  console.log("BorrowLogic:", borrowLogic.address);
-  console.log("Oracle:", oracle.address);
-  console.log("InterestRateModel:", irm.address);
-  console.log("AliceFaucet:", aliceFaucet.address);
-  console.log("AliceToken:", aliceToken.address);
-  console.log("BobFaucet:", bobFaucet.address);
-  console.log("BobToken:", bobToken.address);
-  console.log("LendingPool:", pool.address);
-  console.log("FlashLoanPool:", flashPool.address);
-  console.log("FlashLoanSwap:", flashSwap.address);
-  console.log("FlashLoanBot:", flashBot.address);
-  console.log("PoolCoin:", poolCoin.address);
-  console.log("PoolIncentivesController:", poolIncentivesController.address);
+  if (log) {
+    console.log("ReserveLogic:", reserveLogic.address);
+    console.log("DebtVaultLogic:", debtVaultLogic.address);
+    console.log("ConfigLogic:", configLogic.address);
+    console.log("DepositLogic:", depositLogic.address);
+    console.log("BorrowLogic:", borrowLogic.address);
+    console.log("Oracle:", oracle.address);
+    console.log("InterestRateModel:", irm.address);
+    console.log("AliceFaucet:", aliceFaucet.address);
+    console.log("AliceToken:", aliceToken.address);
+    console.log("BobFaucet:", bobFaucet.address);
+    console.log("BobToken:", bobToken.address);
+    console.log("LendingPool:", pool.address);
+    console.log("FlashLoanPool:", flashPool.address);
+    console.log("FlashLoanSwap:", flashSwap.address);
+    console.log("FlashLoanBot:", flashBot.address);
+    console.log("PoolCoin:", poolCoin.address);
+    console.log("PoolIncentivesController:", poolIncentivesController.address);
+  }
 
   return {
     reserveLogic: reserveLogic.address,
@@ -168,15 +172,4 @@ export async function deploy() {
     poolCoin: poolCoin.address,
     poolIncentivesController: poolIncentivesController.address,
   } as const;
-}
-
-async function main() {
-  await deploy();
-}
-
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
 }
