@@ -681,6 +681,46 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getLiquidationTables",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "debtVaultId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "borrower",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "healthFactor",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "debtValue",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "collateralValue",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct LendingPool.LiquidationTable[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",

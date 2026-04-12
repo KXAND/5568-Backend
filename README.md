@@ -6,7 +6,7 @@ Backend repository for our DeFi lending protocol project on Ethereum.
 
 Please read [GIT_RULES.md](./GIT_RULES.md) first and follow it during development. Frontend integration guide: [FRONTEND_API.md](./docs/FRONTEND_API.md)
 
-## Targets (PM not finalized yet)
+## Targets
 
 Basic:
 
@@ -15,15 +15,15 @@ Basic:
 - [x] Interest rate model (kinked)
   - [x] Dynamic interest rate model based on utilization rate
   - [x] Accrue interest per block (lenders and borrowers)
-- [] Oracle (simple fixed-price)
+- [x] Oracle (simple fixed-price)
 
 Bonus:
 
-- [ ] Liquidation mechanism:
-  - [ ] Allow a third party to liquidate a position when health factor < 1
-  - [ ] Liquidation Spread/Bonus
-- [ ] Flash Loan
-- [ ] Real Oracle
+- [x] Liquidation mechanism:
+  - [x] Allow a third party to liquidate a position when health factor < 1
+  - [x] Liquidation Spread/Bonus
+- [x] Flash Loan
+- [x] Real Oracle
 - [x] Advanced tokenomics: issue a governance token (like COMP or AAVE) as a reward for lenders/borrowers (liquidity mining)
 - [ ] ~~Analytics & UX~~
 
@@ -62,10 +62,30 @@ Compile contracts:
 pnpm exec hardhat compile
 ```
 
-Run tests:
+### Run Test
+
+Start a local node:
 
 ```shell
-pnpm exec hardhat test
+pnpm exec hardhat node
+```
+
+Then run all test:
+
+```shell
+pnpm exec hardhat test --network localhost
+```
+
+Or only use TypeScript test:
+
+```shell
+pnpm exec hardhat test nodejs --network localhost
+```
+
+Or only use Solidity test:
+
+```shell
+pnpm exec hardhat test solidity --network localhost
 ```
 
 ### Run a Script on a Fresh EVM
