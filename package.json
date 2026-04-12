@@ -18,8 +18,6 @@
     "node": "hardhat node",
     "play": "hardhat run scripts/play.ts --network hardhatMainnet",
     "play:local": "hardhat run scripts/play.ts --network localhost",
-    "scenario": "node test/test_qjh/scenarios/launch-scenario.mjs hardhatMainnet",
-    "scenario:local": "node test/test_qjh/scenarios/launch-scenario.mjs localhost",
     "test": "hardhat test",
     "test:nodejs": "hardhat test nodejs",
     "test:fast": "hardhat test --no-compile"
