@@ -382,6 +382,30 @@ File: `contracts/LendingPool.sol`
   Inputs: `user`: wallet address. `asset`: reserve asset.
   Output: aToken shares.
 
+- `getUserCustodiedAssetAmount(address user, address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return underlying asset amount converted from the user's custodied shares.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: asset amount.
+
+- `getUserLockedAssetAmount(address user, address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return underlying asset amount converted from the user's locked collateral shares.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: asset amount.
+
+- `getUserClaimableAssetAmount(address user, address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return underlying asset amount converted from the user's claimable shares.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: asset amount.
+
+- `getUserTotalDepositAssetAmount(address user, address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return user's total deposit amount as underlying, including pool-custodied shares and wallet-held aToken shares.
+  Inputs: `user`: wallet address. `asset`: reserve asset.
+  Output: asset amount.
+
 - `getUserDebtBalance(address user, address asset) -> uint256`
   Version: 0.0.1
   Purpose: return total debt of one asset across all debtVaults owned by the user.
