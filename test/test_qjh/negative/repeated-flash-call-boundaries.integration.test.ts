@@ -5,7 +5,7 @@ import {
   acquireLocalNode,
   createAliceBobFixture,
   openVault,
-  recoverViaRepeatedFlashLiquidation,
+  repeatFlashLiquidationCallsUntilHealthy,
   releaseLocalNode,
   runQuietly,
   setPrices,
@@ -23,7 +23,7 @@ after(async () => {
   await releaseLocalNode();
 });
 
-it("rejects invalid repeated-flash boundary cases", async () => {
+it("rejects invalid repeated single-flash-call boundary cases", async () => {
   const cases = [
     {
       borrowAmount: "60",
@@ -50,7 +50,7 @@ it("rejects invalid repeated-flash boundary cases", async () => {
         });
 
         await setPrices(ctx, { alicePrice: "50", bobPrice: "1" });
-        await recoverViaRepeatedFlashLiquidation(ctx, {
+        await repeatFlashLiquidationCallsUntilHealthy(ctx, {
           vaultId: position.vaultId,
           caller: "A",
           borrowAsset: "bob",

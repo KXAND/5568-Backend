@@ -7,7 +7,7 @@ import {
   exitPosition,
   openVault,
   parseAmount,
-  recoverViaRepeatedFlashLiquidation,
+  repeatFlashLiquidationCallsUntilHealthy,
   releaseLocalNode,
   runQuietly,
   setPrices,
@@ -21,7 +21,7 @@ after(async () => {
   await releaseLocalNode();
 });
 
-it("recovers an unhealthy Alice-collateral/Bob-borrow vault with repeated flash liquidations", async () => {
+it("recovers an unhealthy vault by repeatedly calling single flash liquidations", async () => {
   const cases = [
     { borrowAmount: "86", label: "near liquidation threshold" },
     { borrowAmount: "90", label: "baseline unhealthy vault" },
@@ -42,7 +42,7 @@ it("recovers an unhealthy Alice-collateral/Bob-borrow vault with repeated flash 
       });
 
       await setPrices(ctx, { alicePrice: "50", bobPrice: "1" });
-      const result = await recoverViaRepeatedFlashLiquidation(ctx, {
+      const result = await repeatFlashLiquidationCallsUntilHealthy(ctx, {
         vaultId: position.vaultId,
         caller: "A",
         borrowAsset: "bob",

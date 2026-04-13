@@ -652,7 +652,7 @@ export async function flashLiquidate(
   };
 }
 
-export async function recoverViaRepeatedFlashLiquidation(
+export async function repeatFlashLiquidationCallsUntilHealthy(
   ctx: TestContext,
   params: {
     vaultId: bigint;
