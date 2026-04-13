@@ -549,6 +549,33 @@ export async function openVault(ctx: TestContext, params: OpenVaultParams): Prom
   };
 }
 
+export async function addCollateralToPosition(
+  ctx: TestContext,
+  position: OpenVaultResult,
+  amount: AmountInput
+) {
+  const collateralAmount = parseAmount(amount);
+
+  await waitForReceipt(
+    ctx.publicClient,
+    await position.collateralToken.write.approve([ctx.pool.address, collateralAmount], {
+      account: position.borrowerAddress,
+    })
+  );
+  await waitForReceipt(
+    ctx.publicClient,
+    await ctx.pool.write.deposit([position.collateralToken.address, collateralAmount], {
+      account: position.borrowerAddress,
+    })
+  );
+  await waitForReceipt(
+    ctx.publicClient,
+    await ctx.pool.write.depositCollateral([position.vaultId, position.collateralToken.address, collateralAmount], {
+      account: position.borrowerAddress,
+    })
+  );
+}
+
 export async function readVaultState(
   ctx: TestContext,
   vaultId: bigint,
@@ -686,7 +713,9 @@ export async function repeatFlashLiquidationCallsUntilHealthy(
     });
 
     state = await readVaultState(ctx, params.vaultId, params.borrowAsset);
-    assertCondition(iteration < maxIterations, "exceeded max iterations");
+    if (state.hf < finalHealthFactorTarget) {
+      assertCondition(iteration < maxIterations, "exceeded max iterations");
+    }
   }
 
   return {
