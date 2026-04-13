@@ -636,6 +636,54 @@ contract LendingPool is Ownable {
         return custodiedShares[user][asset] - lockedShares[user][asset];
     }
 
+    function getUserCustodiedAssetAmount(
+        address user,
+        address asset
+    ) external view returns (uint256) {
+        LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
+        return
+            ReserveLogic.assetAmountFromShares(
+                reserve,
+                custodiedShares[user][asset],
+                RAY
+            );
+    }
+
+    function getUserLockedAssetAmount(
+        address user,
+        address asset
+    ) external view returns (uint256) {
+        LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
+        return
+            ReserveLogic.assetAmountFromShares(
+                reserve,
+                lockedShares[user][asset],
+                RAY
+            );
+    }
+
+    function getUserClaimableAssetAmount(
+        address user,
+        address asset
+    ) external view returns (uint256) {
+        LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
+        return
+            ReserveLogic.assetAmountFromShares(
+                reserve,
+                custodiedShares[user][asset] - lockedShares[user][asset],
+                RAY
+            );
+    }
+
+    function getUserTotalDepositAssetAmount(
+        address user,
+        address asset
+    ) external view returns (uint256) {
+        LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
+        uint256 totalShares = custodiedShares[user][asset] +
+            reserve.aToken.balanceOf(user);
+        return ReserveLogic.assetAmountFromShares(reserve, totalShares, RAY);
+    }
     function getUserDebtBalance(
         address user,
         address asset
