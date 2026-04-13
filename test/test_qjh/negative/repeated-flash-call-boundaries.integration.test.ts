@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, before, it } from "node:test";
+import { after, before, describe, it } from "node:test";
 
 import {
   acquireLocalNode,
@@ -14,52 +14,54 @@ import {
 
 let ctx: TestContext;
 
-before(async () => {
-  await acquireLocalNode();
-  ctx = await runQuietly(() => createAliceBobFixture());
-});
+describe("Repeated Flash Call Boundaries", () => {
+  before(async () => {
+    await acquireLocalNode();
+    ctx = await runQuietly(() => createAliceBobFixture());
+  });
 
-after(async () => {
-  await releaseLocalNode();
-});
+  after(async () => {
+    await releaseLocalNode();
+  });
 
-it("rejects invalid repeated single-flash-call boundary cases", async () => {
-  const cases = [
-    {
-      borrowAmount: "60",
-      maxIterations: 10,
-      expectedError: /vault is already healthy/i,
-    },
-    {
-      borrowAmount: "90",
-      maxIterations: 1,
-      expectedError: /exceeded max iterations/i,
-    },
-  ] as const;
+  it("rejects invalid repeated single-flash-call boundary cases", async () => {
+    const cases = [
+      {
+        borrowAmount: "60",
+        maxIterations: 10,
+        expectedError: /vault is already healthy/i,
+      },
+      {
+        borrowAmount: "90",
+        maxIterations: 1,
+        expectedError: /exceeded max iterations/i,
+      },
+    ] as const;
 
-  for (const testCase of cases) {
-    await assert.rejects(
-      runQuietly(async () => {
-        await setPrices(ctx, { alicePrice: "100", bobPrice: "1" });
-        const position = await openVault(ctx, {
-          borrower: "D",
-          collateralAsset: "alice",
-          collateralAmount: "2",
-          borrowAsset: "bob",
-          borrowAmount: testCase.borrowAmount,
-        });
+    for (const testCase of cases) {
+      await assert.rejects(
+        runQuietly(async () => {
+          await setPrices(ctx, { alicePrice: "100", bobPrice: "1" });
+          const position = await openVault(ctx, {
+            borrower: "D",
+            collateralAsset: "alice",
+            collateralAmount: "2",
+            borrowAsset: "bob",
+            borrowAmount: testCase.borrowAmount,
+          });
 
-        await setPrices(ctx, { alicePrice: "50", bobPrice: "1" });
-        await repeatFlashLiquidationCallsUntilHealthy(ctx, {
-          vaultId: position.vaultId,
-          caller: "A",
-          borrowAsset: "bob",
-          collateralAsset: "alice",
-          maxIterations: testCase.maxIterations,
-          finalHealthFactorTarget: "1",
-        });
-      }),
-      testCase.expectedError
-    );
-  }
+          await setPrices(ctx, { alicePrice: "50", bobPrice: "1" });
+          await repeatFlashLiquidationCallsUntilHealthy(ctx, {
+            vaultId: position.vaultId,
+            caller: "A",
+            borrowAsset: "bob",
+            collateralAsset: "alice",
+            maxIterations: testCase.maxIterations,
+            finalHealthFactorTarget: "1",
+          });
+        }),
+        testCase.expectedError
+      );
+    }
+  });
 });
