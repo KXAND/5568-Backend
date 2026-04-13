@@ -280,7 +280,7 @@ export async function createTestContext(): Promise<TestContext> {
     C: C.account.address,
     D: D.account.address,
   };
-  const deployed = await deploy();
+  const deployed = await deploy({ viem });
 
   const oracle = await viem.getContractAt("SimpleOracle", deployed.oracle);
   const aliceFaucet = await viem.getContractAt("AliceFaucet", deployed.aliceFaucet);
