@@ -539,6 +539,11 @@ File: `contracts/LendingPool.sol`
   Purpose: liquidate an unhealthy debtVault by repaying one debt asset and seizing one collateral asset.
   Inputs: `debtVaultId`: target debtVault. `debtAsset`: asset being repaid. `collateralAsset`: asset being seized. `repayAmount`: asset amount to repay.
   Output: none.
+- `getLiquidationTables() returns (LiquidationTable[] memory)`
+  Version: 0.0.1
+  Purpose: return all unhealthy debtVaults (healthFactor < RAY) with their liquidation information.
+  Inputs: none.
+  Output: array of LiquidationTable structs, each containing `debtVaultId`: debtVault ID. `borrower`: borrower address. `healthFactor`: health factor in RAY precision. `debtValue`: total debt value. `collateralValue`: collateral value adjusted by liquidation threshold.
 
 ### Frontend Notes
 
