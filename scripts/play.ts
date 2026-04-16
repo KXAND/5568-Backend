@@ -1,6 +1,6 @@
 import { parseEventLogs } from "viem";
 import { network } from "hardhat";
-import { deploy } from "./deploy.js";
+import { deploy } from "../utils/deploy.js";
 import { runIncentivesDemo } from "./scenarios/incentives.js";
 import { runProtocolFeesDemo } from "./scenarios/protocol_fees.js";
 

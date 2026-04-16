@@ -1,5 +1,5 @@
 import hre from "hardhat";
-import { deploy } from "./deploy.js";
+import { deploy } from "../utils/deploy.js";
 
 interface TokenPrice {
   name: string;
