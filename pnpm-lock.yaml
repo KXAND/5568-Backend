@@ -11,9 +11,15 @@ importers:
       '@nomicfoundation/hardhat-ignition':
         specifier: ^3.0.9
         version: 3.0.9(@nomicfoundation/hardhat-verify@3.0.12(hardhat@3.1.11))(hardhat@3.1.11)
+      '@nomicfoundation/hardhat-toolbox':
+        specifier: ^7.0.0
+        version: 7.0.0
       '@nomicfoundation/hardhat-toolbox-viem':
         specifier: ^5.0.3
         version: 5.0.3(451fddb795dff4a5f285cc7452ec6608)
+      '@nomicfoundation/hardhat-viem':
+        specifier: ^3.0.4
+        version: 3.0.4(hardhat@3.1.11)(viem@2.47.0(typescript@5.8.3)(zod@3.25.76))
       '@openzeppelin/contracts':
         specifier: ^5.0.2
         version: 5.6.1
@@ -399,6 +405,9 @@ packages:
       '@nomicfoundation/ignition-core': ^3.0.7
       hardhat: ^3.0.0
       viem: ^2.43.0
+
+  '@nomicfoundation/hardhat-toolbox@7.0.0':
+    resolution: {integrity: sha512-pMoxUU0WWxXv5zkE6mm3JZcvLN94TCax+NVZv5TMscnfwQ42lm+qEAnNxuGNneFbo8JGbHu1B6aEzV08bhmI3w==}
 
   '@nomicfoundation/hardhat-utils@4.0.0':
     resolution: {integrity: sha512-Deu4od7flcM89K+SEAxmOyn7FFWGiEILrGjoxYl/Gus0tctgpLNaK3M4LIjrJ25ci8LBjGVe3i28XZA4+QGQHQ==}
@@ -1235,6 +1244,8 @@ snapshots:
       '@nomicfoundation/ignition-core': 3.0.9
       hardhat: 3.1.11
       viem: 2.47.0(typescript@5.8.3)(zod@3.25.76)
+
+  '@nomicfoundation/hardhat-toolbox@7.0.0': {}
 
   '@nomicfoundation/hardhat-utils@4.0.0':
     dependencies:

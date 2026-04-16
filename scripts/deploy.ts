@@ -1,37 +1,63 @@
-// scripts/deploy.ts
-import { network } from "hardhat";
-import { writeFileSync } from "fs";
+const LIBRARIES = {
+  reserve: "project/contracts/logic/ReserveLogic.sol:ReserveLogic",
+  debtVault: "project/contracts/logic/DebtVaultLogic.sol:DebtVaultLogic",
+  config: "project/contracts/logic/ConfigLogic.sol:ConfigLogic",
+  supply: "project/contracts/logic/DepositLogic.sol:DepositLogic",
+  borrow: "project/contracts/logic/BorrowLogic.sol:BorrowLogic",
+} as const;
 
-export async function deploy() {
-  const { viem } = await network.connect({ network: "localhost" });
+type DeployOptions = {
+  viem: any;
+  log?: boolean;
+};
+
+export async function deploy(options: DeployOptions) {
+  const { viem, log = false } = options;
   const [deployer] = await viem.getWalletClients();
 
-  console.log("🚀 开始部署完整借贷系统...\n");
-  
-  // 1) Oracle
-  console.log("📝 部署 Oracle 合约...");
+  const reserveLogic = await viem.deployContract("ReserveLogic", [], {
+    client: { wallet: deployer },
+  });
+
+  const debtVaultLogic = await viem.deployContract("DebtVaultLogic", [], {
+    client: { wallet: deployer },
+    libraries: {
+      [LIBRARIES.reserve]: reserveLogic.address,
+    },
+  });
+
+  const configLogic = await viem.deployContract("ConfigLogic", [], {
+    client: { wallet: deployer },
+  });
+
+  const depositLogic = await viem.deployContract("DepositLogic", [], {
+    client: { wallet: deployer },
+    libraries: {
+      [LIBRARIES.reserve]: reserveLogic.address,
+    },
+  });
+
+  const borrowLogic = await viem.deployContract("BorrowLogic", [], {
+    client: { wallet: deployer },
+    libraries: {
+      [LIBRARIES.reserve]: reserveLogic.address,
+    },
+  });
+
   const oracle = await viem.deployContract("SimpleOracle", [], {
     client: { wallet: deployer },
   });
-  console.log(`✅ Oracle: ${oracle.address}`);
 
-  // 2) Interest rate model (kinked)
-  // Rates are per-block, scaled by 1e18
   const baseRate = 0n;
-  const slope1 = 5_000_000_000_000_000n; // 0.005
-  const slope2 = 20_000_000_000_000_000n; // 0.02
-  const kink = 800_000_000_000_000_000n; // 0.8
-  
-  console.log("📝 部署 InterestRateModel 合约...");
+  const slope1 = 5_000_000_000_000_000n;
+  const slope2 = 20_000_000_000_000_000n;
+  const kink = 800_000_000_000_000_000n;
   const irm = await viem.deployContract(
     "InterestRateModel",
     [baseRate, slope1, slope2, kink],
     { client: { wallet: deployer } }
   );
-  console.log(`✅ InterestRateModel: ${irm.address}`);
 
-  // 3) Faucets + tokens
-  console.log("📝 部署 AliceFaucet 和 AliceToken...");
   const aliceInitial = 1_000_000n * 10n ** 18n;
   const aliceDrip = 100_000n * 10n ** 18n;
   const aliceCooldown = 60n;
@@ -40,14 +66,8 @@ export async function deploy() {
     [aliceInitial, aliceDrip, aliceCooldown],
     { client: { wallet: deployer } }
   );
-  const aliceToken = await viem.getContractAt(
-    "AliceToken",
-    await aliceFaucet.read.token()
-  );
-  console.log(`✅ AliceFaucet: ${aliceFaucet.address}`);
-  console.log(`✅ AliceToken: ${aliceToken.address}`);
+  const aliceToken = await viem.getContractAt("AliceToken", await aliceFaucet.read.token());
 
-  console.log("📝 部署 BobFaucet 和 BobToken...");
   const bobInitial = 1_000_000n * 10n ** 18n;
   const bobDrip = 100_000n * 10n ** 18n;
   const bobCooldown = 60n;
@@ -56,80 +76,100 @@ export async function deploy() {
     [bobInitial, bobDrip, bobCooldown],
     { client: { wallet: deployer } }
   );
-  const bobToken = await viem.getContractAt(
-    "BobToken",
-    await bobFaucet.read.token()
-  );
-  console.log(`✅ BobFaucet: ${bobFaucet.address}`);
-  console.log(`✅ BobToken: ${bobToken.address}`);
+  const bobToken = await viem.getContractAt("BobToken", await bobFaucet.read.token());
 
-  // 4) Lending pool
-  console.log("📝 部署 LendingPool...");
-  const ltv = 750_000_000_000_000_000n; // 0.75
-  const pool = await viem.deployContract(
-    "LendingPool",
-    [
-      bobToken.address,
-      aliceToken.address,
-      oracle.address,
-      irm.address,
-      ltv,
-      "PoolCoin",
-      "pCOIN",
-    ],
+  const pool = await viem.deployContract("LendingPool", [oracle.address], {
+    client: { wallet: deployer },
+    libraries: {
+      [LIBRARIES.reserve]: reserveLogic.address,
+      [LIBRARIES.debtVault]: debtVaultLogic.address,
+      [LIBRARIES.config]: configLogic.address,
+      [LIBRARIES.supply]: depositLogic.address,
+      [LIBRARIES.borrow]: borrowLogic.address,
+    },
+  });
+
+  await pool.write.addReserve(
+    [aliceToken.address, irm.address, false, true, 0n, 0n, "Pool Alice", "pALC"],
+    { account: deployer.account.address }
+  );
+  await pool.write.addReserve(
+    [bobToken.address, irm.address, true, false, 750_000_000_000_000_000n, 850_000_000_000_000_000n, "Pool Bob", "pBOB"],
+    { account: deployer.account.address }
+  );
+
+  const flashPool = await viem.deployContract(
+    "FlashLoanPool",
+    [aliceToken.address, bobToken.address],
     { client: { wallet: deployer } }
   );
-  console.log(`✅ LendingPool: ${pool.address}`);
 
-  // 保存地址到文件
-  const deploymentInfo = {
-    network: "localhost",
-    timestamp: new Date().toISOString(),
-    contracts: {
-      oracle: oracle.address,
-      interestRateModel: irm.address,
-      aliceFaucet: aliceFaucet.address,
-      aliceToken: aliceToken.address,
-      bobFaucet: bobFaucet.address,
-      bobToken: bobToken.address,
-      lendingPool: pool.address,
-    },
-    deployer: deployer.account.address,
-  };
+  const flashSwap = await viem.deployContract(
+    "FlashLoanSwap",
+    [aliceToken.address, bobToken.address],
+    { client: { wallet: deployer } }
+  );
 
-  // 保存为 JSON 文件
-  writeFileSync("deployment.json", JSON.stringify(deploymentInfo, null, 2));
-  
-  // 保存为简单的地址文件（便于脚本读取）
-  const addressFileContent = `# 合约地址文件
-# 生成时间: ${new Date().toISOString()}
+  const flashBot = await viem.deployContract(
+    "FlashLoanBot",
+    [flashPool.address, pool.address, flashSwap.address],
+    { client: { wallet: deployer } }
+  );
 
-ORACLE_ADDRESS=${oracle.address}
-INTEREST_RATE_MODEL_ADDRESS=${irm.address}
-ALICE_FAUCET_ADDRESS=${aliceFaucet.address}
-ALICE_TOKEN_ADDRESS=${aliceToken.address}
-BOB_FAUCET_ADDRESS=${bobFaucet.address}
-BOB_TOKEN_ADDRESS=${bobToken.address}
-LENDING_POOL_ADDRESS=${pool.address}
-DEPLOYER_ADDRESS=${deployer.account.address}
-`;
-  
-  writeFileSync("contracts.addr", addressFileContent);
-  
-  console.log("\n📁 部署信息已保存到以下文件:");
-  console.log("   - deployment.json (详细JSON格式)");
-  console.log("   - contracts.addr (简单地址格式)\n");
-  
-  console.log("🎉 完整部署完成!");
+  const poolCoinTotalSupply = 1_919_810n * 10n ** 18n;
+  const poolCoin = await viem.deployContract(
+    "PoolCoin",
+    [deployer.account.address, poolCoinTotalSupply],
+    { client: { wallet: deployer } }
+  );
 
-  return [oracle.address, irm.address,
-    aliceFaucet.address, aliceToken.address,
-    bobFaucet.address, bobToken.address,
-    pool.address]
+  const poolIncentivesController = await viem.deployContract(
+    "PoolIncentivesController",
+    [poolCoin.address, pool.address, deployer.account.address],
+    { client: { wallet: deployer } }
+  );
+
+  await pool.write.setPoolIncentivesController([poolIncentivesController.address], {
+    account: deployer.account.address,
+  });
+
+  if (log) {
+    console.log("ReserveLogic:", reserveLogic.address);
+    console.log("DebtVaultLogic:", debtVaultLogic.address);
+    console.log("ConfigLogic:", configLogic.address);
+    console.log("DepositLogic:", depositLogic.address);
+    console.log("BorrowLogic:", borrowLogic.address);
+    console.log("Oracle:", oracle.address);
+    console.log("InterestRateModel:", irm.address);
+    console.log("AliceFaucet:", aliceFaucet.address);
+    console.log("AliceToken:", aliceToken.address);
+    console.log("BobFaucet:", bobFaucet.address);
+    console.log("BobToken:", bobToken.address);
+    console.log("LendingPool:", pool.address);
+    console.log("FlashLoanPool:", flashPool.address);
+    console.log("FlashLoanSwap:", flashSwap.address);
+    console.log("FlashLoanBot:", flashBot.address);
+    console.log("PoolCoin:", poolCoin.address);
+    console.log("PoolIncentivesController:", poolIncentivesController.address);
+  }
+
+  return {
+    reserveLogic: reserveLogic.address,
+    debtVaultLogic: debtVaultLogic.address,
+    configLogic: configLogic.address,
+    depositLogic: depositLogic.address,
+    borrowLogic: borrowLogic.address,
+    oracle: oracle.address,
+    interestRateModel: irm.address,
+    aliceFaucet: aliceFaucet.address,
+    aliceToken: aliceToken.address,
+    bobFaucet: bobFaucet.address,
+    bobToken: bobToken.address,
+    pool: pool.address,
+    flashPool: flashPool.address,
+    flashSwap: flashSwap.address,
+    flashBot: flashBot.address,
+    poolCoin: poolCoin.address,
+    poolIncentivesController: poolIncentivesController.address,
+  } as const;
 }
-
-// 取消注释以下行以启用自动部署
-deploy().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});

@@ -1,0 +1,149 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.28;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {
+    SafeERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import {LendingPoolTypes} from "../types/LendingPoolTypes.sol";
+import {SimpleOracle} from "../Oracle.sol";
+import {DebtVaultLogic} from "./DebtVaultLogic.sol";
+import {ReserveLogic} from "./ReserveLogic.sol";
+
+library LiquidationLogic {
+    using SafeERC20 for IERC20;
+
+    event LiquidationExecuted(
+        address indexed liquidator,
+        uint256 indexed debtVaultId,
+        address indexed debtAsset,
+        address collateralAsset,
+        uint256 debtRepaid,
+        uint256 collateralSharesSeized
+    );
+
+    function executeLiquidation(
+        mapping(address => LendingPoolTypes.Reserve) storage reserves,
+        mapping(uint256 => LendingPoolTypes.DebtVault) storage debtVaults,
+        mapping(address => mapping(address => uint256)) storage custodiedShares,
+        mapping(address => mapping(address => uint256)) storage lockedShares,
+        mapping(address => mapping(address => uint256)) storage userDebtPrincipal,
+        SimpleOracle oracle,
+        LendingPoolTypes.LiquidationParams memory params
+    )
+        internal
+        returns (uint256 actualRepayAmount, uint256 actualTransferredShares)
+    {
+        require(params.repayAmount > 0, "LendingPool: amount=0");
+
+        LendingPoolTypes.DebtVault storage debtVault = debtVaults[
+            params.debtVaultId
+        ];
+        LendingPoolTypes.Reserve storage debtReserve = reserves[
+            params.debtAsset
+        ];
+        require(debtReserve.enabled, "LendingPool: debtReserve missing");
+        require(
+            reserves[params.collateralAsset].enabled,
+            "LendingPool: collateralAsset missing"
+        );
+
+        // liquidator actual repay
+        uint256 principal = ReserveLogic.borrowBalance(
+            debtVaults,
+            params.debtVaultId,
+            params.debtAsset,
+            debtReserve
+        );
+        require(principal > 0, "LendingPool: no debt");
+        actualRepayAmount = (principal * params.closeFactor) / params.bps;
+        actualRepayAmount = params.repayAmount > actualRepayAmount
+            ? actualRepayAmount
+            : params.repayAmount;
+
+        // liquidator actual earn
+        uint256 requestedShares = DebtVaultLogic.getLiquidationShares(
+            reserves,
+            oracle,
+            actualRepayAmount,
+            params.debtAsset,
+            params.collateralAsset,
+            params.liquidationBonus,
+            params.bps,
+            params.ray
+        );
+        uint256 baseShares = DebtVaultLogic.getLiquidationShares(
+            reserves,
+            oracle,
+            actualRepayAmount,
+            params.debtAsset,
+            params.collateralAsset,
+            0,
+            params.bps,
+            params.ray
+        );
+
+        actualTransferredShares = DebtVaultLogic
+            .getActualLiquidationTransferredShares(
+                debtVault,
+                lockedShares,
+                params.collateralAsset,
+                requestedShares
+            );
+
+        // interact
+        debtReserve.totalBorrows -= actualRepayAmount;
+        debtVault.borrowedPrincipal[params.debtAsset] =
+            principal -
+            actualRepayAmount;
+        debtVault.borrowedIndex[params.debtAsset] = debtReserve.borrowIndex;
+        uint256 principalRepaid = ReserveLogic.getDeltaPrincipal(
+            debtReserve,
+            principal,
+            principal - actualRepayAmount,
+            params.ray
+        );
+        debtReserve.totalDebtPrincipal -= principalRepaid;
+        userDebtPrincipal[debtVault.borrower][
+            params.debtAsset
+        ] -= principalRepaid;
+        debtVault.collateralShares[
+            params.collateralAsset
+        ] -= actualTransferredShares;
+        lockedShares[debtVault.borrower][
+            params.collateralAsset
+        ] -= actualTransferredShares;
+        custodiedShares[debtVault.borrower][
+            params.collateralAsset
+        ] -= actualTransferredShares;
+        uint256 bonusShares = actualTransferredShares > baseShares
+            ? actualTransferredShares - baseShares
+            : 0;
+        uint256 protocolBonusShares = (bonusShares *
+            params.protocolLiquidationBonusCutBps) / params.bps;
+        uint256 liquidatorShares = actualTransferredShares - protocolBonusShares;
+        custodiedShares[params.liquidator][params.collateralAsset] +=
+            liquidatorShares;
+        if (protocolBonusShares > 0) {
+            custodiedShares[params.treasury][
+                params.collateralAsset
+            ] += protocolBonusShares;
+        }
+
+        IERC20(params.debtAsset).safeTransferFrom(
+            params.liquidator,
+            address(this),
+            actualRepayAmount
+        );
+
+        emit LiquidationExecuted(
+            params.liquidator,
+            params.debtVaultId,
+            params.debtAsset,
+            params.collateralAsset,
+            actualRepayAmount,
+            actualTransferredShares
+        );
+    }
+}
