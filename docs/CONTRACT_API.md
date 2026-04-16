@@ -433,6 +433,18 @@ File: `contracts/LendingPool.sol`
   Inputs: none.
   Output: controller address.
 
+- `treasury() -> address`
+  Version: 0.0.1
+  Purpose: return the address currently receiving protocol liquidation-cut shares by default.
+  Inputs: none.
+  Output: treasury address.
+
+- `protocolLiquidationCutBps() -> uint256`
+  Version: 0.0.1
+  Purpose: return protocol liquidation share in basis points.
+  Inputs: none.
+  Output: basis points.
+
 #### Reserve
 
 - `reserves(address asset) -> (...)`
@@ -459,6 +471,18 @@ File: `contracts/LendingPool.sol`
   Purpose: return current utilization of a reserve.
   Inputs: `asset`: reserve asset address.
   Output: utilization ratio, scaled by `1e18`.
+
+- `getReserveFactorBps(address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return protocol reserve factor used to split borrow interest into protocol fees.
+  Inputs: `asset`: reserve asset.
+  Output: basis points.
+
+- `getAccruedProtocolFees(address asset) -> uint256`
+  Version: 0.0.1
+  Purpose: return currently accrued but uncollected protocol fees for one reserve asset.
+  Inputs: `asset`: reserve asset.
+  Output: asset amount.
 
 #### DebtVault
 
@@ -614,6 +638,30 @@ File: `contracts/LendingPool.sol`
   Version: 0.0.1
   Purpose: update close factor.
   Inputs: `_closeFactor`: new closefactor, not allowed bigger than BPS.
+  Output: none.
+
+- `setTreasury(address newTreasury)` (only owner)
+  Version: 0.0.1
+  Purpose: update protocol treasury address.
+  Inputs: `newTreasury`: non-zero treasury address.
+  Output: none.
+
+- `setReserveFactorBps(address asset, uint256 bps_)` (only owner)
+  Version: 0.0.1
+  Purpose: update reserve-level protocol interest spread factor.
+  Inputs: `asset`: reserve asset. `bps_`: basis points, max `10_000`.
+  Output: none.
+
+- `setProtocolLiquidationCutBps(uint256 bps_)` (only owner)
+  Version: 0.0.1
+  Purpose: update protocol share of liquidation bonus.
+  Inputs: `bps_`: basis points, max `10_000`.
+  Output: none.
+
+- `collectProtocolFees(address asset, uint256 amount, address to)` (only owner)
+  Version: 0.0.1
+  Purpose: transfer accrued protocol fees of one reserve to a receiver.
+  Inputs: `asset`: reserve asset. `amount`: asset amount. `to`: receiver address.
   Output: none.
 
 #### Deposit & Withdraw
@@ -870,3 +918,4 @@ File: `contracts/Flashloan/FlashLoanSwap.sol`
   Purpose: swap Bob input to Alice output at current rate.
   Inputs: `bobAmount`: Bob input amount.
   Output: none.
+

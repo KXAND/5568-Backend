@@ -15,19 +15,25 @@ library ReserveLogic {
         address asset,
         LendingPoolTypes.Reserve storage reserve,
         uint256 assetCash,
-        uint256 ray
-    ) external returns (uint256 interest) {
+        uint256 ray,
+        uint256 reserveFactorRay // interest cut of protocol
+    ) external returns (uint256 borrowInterest, uint256 protocolInterest) {
         uint256 blocksElapsed = block.number - reserve.lastAccrualBlock;
         if (blocksElapsed == 0) {
-            return 0;
+            return (0, 0);
         }
 
         uint256 util = getUtilization(reserve, assetCash, ray);
         uint256 borrowRate = reserve.interestRateModel.getBorrowRate(util);
-        uint256 supplyRate = (borrowRate * util) / ray;
-        interest = (reserve.totalBorrows * borrowRate * blocksElapsed) / ray;
+        uint256 supplyRate = (borrowRate * util * (ray - reserveFactorRay)) /
+            ray /
+            ray;
+        borrowInterest =
+            (reserve.totalBorrows * borrowRate * blocksElapsed) /
+            ray;
+        protocolInterest = (borrowInterest * reserveFactorRay) / ray;
 
-        reserve.totalBorrows += interest;
+        reserve.totalBorrows += borrowInterest;
         reserve.borrowIndex =
             reserve.borrowIndex +
             (reserve.borrowIndex * borrowRate * blocksElapsed) /
@@ -40,7 +46,7 @@ library ReserveLogic {
 
         emit Accrue(
             asset,
-            interest,
+            borrowInterest,
             reserve.borrowIndex,
             reserve.liquidityIndex
         );
