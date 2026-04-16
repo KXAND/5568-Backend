@@ -13,6 +13,7 @@ contract FlashLoanSwap {
 
     IERC20 public aliceToken;
     IERC20 public bobToken;
+    IERC20 public charlieToken;
     
     // 交换比例: bobAmount / aliceAmount
     // 例如：如果 exchangeRate = 1.5e18, 则 1 Bob = 1.5 Alice
@@ -22,16 +23,22 @@ contract FlashLoanSwap {
     
     uint256 public totalAliceSwapped;
     uint256 public totalBobSwapped;
+    uint256 public totalCharlieSwapped;
     
     event SwapAliceToBob(address indexed user, uint256 aliceAmount, uint256 bobAmount);
     event SwapBobToAlice(address indexed user, uint256 bobAmount, uint256 aliceAmount);
+    event SwapAliceToCharlie(address indexed user, uint256 aliceAmount, uint256 charlieAmount);
+    event SwapCharlieToAlice(address indexed user, uint256 charlieAmount, uint256 aliceAmount);
+    event SwapBobToCharlie(address indexed user, uint256 bobAmount, uint256 charlieAmount);
+    event SwapCharlieToBob(address indexed user, uint256 charlieAmount, uint256 bobAmount);
     event ExchangeRateUpdated(uint256 newRate);
     event LiquidityAdded(address indexed token, uint256 amount);
     event LiquidityRemoved(address indexed token, uint256 amount);
 
-    constructor(address _aliceToken, address _bobToken) {
+    constructor(address _aliceToken, address _bobToken, address _charlieToken) {
         aliceToken = IERC20(_aliceToken);
         bobToken = IERC20(_bobToken);
+        charlieToken = IERC20(_charlieToken);
         owner = msg.sender;
     }
 
@@ -44,7 +51,10 @@ contract FlashLoanSwap {
      * @dev 添加流动性
      */
     function addLiquidity(address token, uint256 amount) external onlyOwner {
-        require(token == address(aliceToken) || token == address(bobToken), "Invalid token");
+        require(
+            token == address(aliceToken) || token == address(bobToken) || token == address(charlieToken),
+            "Invalid token"
+        );
         require(amount > 0, "Amount must be > 0");
         
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
@@ -55,7 +65,10 @@ contract FlashLoanSwap {
      * @dev 移除流动性
      */
     function removeLiquidity(address token, uint256 amount) external onlyOwner {
-        require(token == address(aliceToken) || token == address(bobToken), "Invalid token");
+        require(
+            token == address(aliceToken) || token == address(bobToken) || token == address(charlieToken),
+            "Invalid token"
+        );
         require(amount > 0, "Amount must be > 0");
         require(IERC20(token).balanceOf(address(this)) >= amount, "Insufficient liquidity");
         
@@ -123,6 +136,62 @@ contract FlashLoanSwap {
         totalAliceSwapped += aliceAmount;
         
         emit SwapBobToAlice(msg.sender, bobAmount, aliceAmount);
+    }
+
+    function swapAliceToCharlie(uint256 aliceAmount) external {
+        require(aliceAmount > 0, "Amount must be > 0");
+        require(charlieToken.balanceOf(address(this)) >= aliceAmount, "Insufficient liquidity");
+
+        aliceToken.safeTransferFrom(msg.sender, address(this), aliceAmount);
+        charlieToken.safeTransfer(msg.sender, aliceAmount);
+
+        totalAliceSwapped += aliceAmount;
+        totalCharlieSwapped += aliceAmount;
+
+        emit SwapAliceToCharlie(msg.sender, aliceAmount, aliceAmount);
+    }
+
+    function swapCharlieToAlice(uint256 charlieAmount) external {
+        require(charlieAmount > 0, "Amount must be > 0");
+        require(aliceToken.balanceOf(address(this)) >= charlieAmount, "Insufficient liquidity");
+
+        charlieToken.safeTransferFrom(msg.sender, address(this), charlieAmount);
+        aliceToken.safeTransfer(msg.sender, charlieAmount);
+
+        totalCharlieSwapped += charlieAmount;
+        totalAliceSwapped += charlieAmount;
+
+        emit SwapCharlieToAlice(msg.sender, charlieAmount, charlieAmount);
+    }
+
+    function swapBobToCharlie(uint256 bobAmount) external {
+        require(bobAmount > 0, "Amount must be > 0");
+
+        uint256 charlieAmount = (bobAmount * exchangeRate) / 1e18;
+        require(charlieToken.balanceOf(address(this)) >= charlieAmount, "Insufficient liquidity");
+
+        bobToken.safeTransferFrom(msg.sender, address(this), bobAmount);
+        charlieToken.safeTransfer(msg.sender, charlieAmount);
+
+        totalBobSwapped += bobAmount;
+        totalCharlieSwapped += charlieAmount;
+
+        emit SwapBobToCharlie(msg.sender, bobAmount, charlieAmount);
+    }
+
+    function swapCharlieToBob(uint256 charlieAmount) external {
+        require(charlieAmount > 0, "Amount must be > 0");
+
+        uint256 bobAmount = (charlieAmount * 1e18) / exchangeRate;
+        require(bobToken.balanceOf(address(this)) >= bobAmount, "Insufficient liquidity");
+
+        charlieToken.safeTransferFrom(msg.sender, address(this), charlieAmount);
+        bobToken.safeTransfer(msg.sender, bobAmount);
+
+        totalCharlieSwapped += charlieAmount;
+        totalBobSwapped += bobAmount;
+
+        emit SwapCharlieToBob(msg.sender, charlieAmount, bobAmount);
     }
 
     /**

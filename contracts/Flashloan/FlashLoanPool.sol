@@ -9,6 +9,7 @@ contract FlashLoanPool is Ownable {
     
     IERC20 public aliceToken;
     IERC20 public bobToken;
+    IERC20 public charlieToken;
     
     uint256 public feeRate = 1;  // 0.01% 手续费
     uint256 public constant FEE_BASE = 10000;
@@ -32,13 +33,17 @@ contract FlashLoanPool is Ownable {
         uint256 amount
     );
 
-    constructor(address _aliceToken, address _bobToken) Ownable(msg.sender) {
+    constructor(address _aliceToken, address _bobToken, address _charlieToken) Ownable(msg.sender) {
         aliceToken = IERC20(_aliceToken);
         bobToken = IERC20(_bobToken);
+        charlieToken = IERC20(_charlieToken);
     }
     
     function deposit(address token, uint256 amount) external {
-        require(token == address(aliceToken) || token == address(bobToken), "Invalid token");
+        require(
+            token == address(aliceToken) || token == address(bobToken) || token == address(charlieToken),
+            "Invalid token"
+        );
         require(amount > 0, "Amount must be > 0");
         
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
@@ -47,7 +52,10 @@ contract FlashLoanPool is Ownable {
     }
 
     function withdraw(address token, uint256 amount) external onlyOwner {
-        require(token == address(aliceToken) || token == address(bobToken), "Invalid token");
+        require(
+            token == address(aliceToken) || token == address(bobToken) || token == address(charlieToken),
+            "Invalid token"
+        );
         require(amount > 0, "Amount must be > 0");
         require(IERC20(token).balanceOf(address(this)) >= amount, "Insufficient balance");
         
@@ -62,7 +70,10 @@ contract FlashLoanPool is Ownable {
         address target,
         bytes calldata data
     ) external {
-        require(token == address(aliceToken) || token == address(bobToken), "Unsupported token");
+        require(
+            token == address(aliceToken) || token == address(bobToken) || token == address(charlieToken),
+            "Unsupported token"
+        );
         
         IERC20 flashToken = IERC20(token);
         uint256 poolBalance = flashToken.balanceOf(address(this));
@@ -93,7 +104,10 @@ contract FlashLoanPool is Ownable {
     }
     
     function getBalance(address token) external view returns (uint256) {
-        require(token == address(aliceToken) || token == address(bobToken), "Invalid token");
+        require(
+            token == address(aliceToken) || token == address(bobToken) || token == address(charlieToken),
+            "Invalid token"
+        );
         return IERC20(token).balanceOf(address(this));
     }
 }

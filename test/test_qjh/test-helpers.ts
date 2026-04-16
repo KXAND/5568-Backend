@@ -16,21 +16,27 @@ type ReserveConfigInput = {
 type MarketSetup = {
   initialAlicePrice?: AmountInput;
   initialBobPrice?: AmountInput;
+  initialCharliePrice?: AmountInput;
   reserveAlice?: AmountInput;
   reserveBob?: AmountInput;
+  reserveCharlie?: AmountInput;
   flashAlice?: AmountInput;
   flashBob?: AmountInput;
+  flashCharlie?: AmountInput;
   swapAlice?: AmountInput;
   swapBob?: AmountInput;
+  swapCharlie?: AmountInput;
   swapExchangeRate?: AmountInput;
   claimAliceFaucetFor?: WalletAlias[];
   claimBobFaucetFor?: WalletAlias[];
+  claimCharlieFaucetFor?: WalletAlias[];
   aliceReserveConfig?: ReserveConfigInput;
   bobReserveConfig?: ReserveConfigInput;
+  charlieReserveConfig?: ReserveConfigInput;
 };
 
 export type WalletAlias = "A" | "B" | "C" | "D";
-export type AssetAlias = "alice" | "bob";
+export type AssetAlias = "alice" | "bob" | "charlie";
 export type TestContext = {
   viem: any;
   publicClient: any;
@@ -40,8 +46,10 @@ export type TestContext = {
   oracle: any;
   aliceFaucet: any;
   bobFaucet: any;
+  charlieFaucet: any;
   aliceToken: any;
   bobToken: any;
+  charlieToken: any;
   pool: any;
   flashPool: any;
   flashSwap: any;
@@ -106,6 +114,12 @@ const DEFAULT_BOB_RESERVE_CONFIG: ReserveConfigInput = {
   ltv: "0.75",
   liquidationThreshold: "0.85",
 };
+const DEFAULT_CHARLIE_RESERVE_CONFIG: ReserveConfigInput = {
+  canBeCollateral: true,
+  canBeBorrowed: true,
+  ltv: "0.75",
+  liquidationThreshold: "0.85",
+};
 
 let hardhatNodeProcess: ChildProcess | undefined;
 let hardhatNodeUsers = 0;
@@ -123,7 +137,15 @@ function parseAmountOrDefault(value: AmountInput | undefined, fallback: AmountIn
 }
 
 function getAssetContract(asset: AssetAlias, ctx: TestContext) {
-  return asset === "alice" ? ctx.aliceToken : ctx.bobToken;
+  if (asset === "alice") {
+    return ctx.aliceToken;
+  }
+
+  if (asset === "bob") {
+    return ctx.bobToken;
+  }
+
+  return ctx.charlieToken;
 }
 
 async function isLocalNodeReady() {
@@ -285,8 +307,10 @@ export async function createTestContext(): Promise<TestContext> {
   const oracle = await viem.getContractAt("SimpleOracle", deployed.oracle);
   const aliceFaucet = await viem.getContractAt("AliceFaucet", deployed.aliceFaucet);
   const bobFaucet = await viem.getContractAt("BobFaucet", deployed.bobFaucet);
+  const charlieFaucet = await viem.getContractAt("CharlieFaucet", deployed.charlieFaucet);
   const aliceToken = await viem.getContractAt("AliceToken", deployed.aliceToken);
   const bobToken = await viem.getContractAt("BobToken", deployed.bobToken);
+  const charlieToken = await viem.getContractAt("CharlieToken", deployed.charlieToken);
   const pool = await viem.getContractAt("LendingPool", deployed.pool);
   const flashPool = await viem.getContractAt("FlashLoanPool", deployed.flashPool);
   const flashSwap = await viem.getContractAt("FlashLoanSwap", deployed.flashSwap);
@@ -301,8 +325,10 @@ export async function createTestContext(): Promise<TestContext> {
     oracle,
     aliceFaucet,
     bobFaucet,
+    charlieFaucet,
     aliceToken,
     bobToken,
+    charlieToken,
     pool,
     flashPool,
     flashSwap,
@@ -313,21 +339,31 @@ export async function createTestContext(): Promise<TestContext> {
 export async function setupMarket(ctx: TestContext, config: MarketSetup = {}) {
   const initialAlicePrice = parseAmountOrDefault(config.initialAlicePrice, "1");
   const initialBobPrice = parseAmountOrDefault(config.initialBobPrice, "2");
+  const initialCharliePrice = parseAmountOrDefault(config.initialCharliePrice, "1");
   const reserveAlice = parseAmountOrDefault(config.reserveAlice, "5000");
   const reserveBob = parseAmountOrDefault(config.reserveBob, "0");
+  const reserveCharlie = parseAmountOrDefault(config.reserveCharlie, "0");
   const flashAlice = parseAmountOrDefault(config.flashAlice, "1000");
   const flashBob = parseAmountOrDefault(config.flashBob, "0");
+  const flashCharlie = parseAmountOrDefault(config.flashCharlie, "0");
   const swapAlice = parseAmountOrDefault(config.swapAlice, "1000");
   const swapBob = parseAmountOrDefault(config.swapBob, "1000");
+  const swapCharlie = parseAmountOrDefault(config.swapCharlie, "0");
   const swapExchangeRate = config.swapExchangeRate === undefined
     ? undefined
     : parseAmount(config.swapExchangeRate);
   const aliceClaims = config.claimAliceFaucetFor ?? ["A"];
   const bobClaims = config.claimBobFaucetFor ?? ["A", "B", "C", "D"];
+  const charlieClaims = config.claimCharlieFaucetFor ?? [];
   const aliceReserveConfig = config.aliceReserveConfig ?? DEFAULT_ALICE_RESERVE_CONFIG;
   const bobReserveConfig = config.bobReserveConfig ?? DEFAULT_BOB_RESERVE_CONFIG;
+  const charlieReserveConfig = config.charlieReserveConfig ?? DEFAULT_CHARLIE_RESERVE_CONFIG;
 
-  await setPrices(ctx, { alicePrice: initialAlicePrice, bobPrice: initialBobPrice });
+  await setPrices(ctx, {
+    alicePrice: initialAlicePrice,
+    bobPrice: initialBobPrice,
+    charliePrice: initialCharliePrice,
+  });
 
   for (const alias of aliceClaims) {
     await waitForReceipt(
@@ -343,6 +379,13 @@ export async function setupMarket(ctx: TestContext, config: MarketSetup = {}) {
     );
   }
 
+  for (const alias of charlieClaims) {
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.charlieFaucet.write.claim({ account: ctx.addresses[alias] })
+    );
+  }
+
   await waitForReceipt(
     ctx.publicClient,
     await ctx.pool.write.setReserveConfig(
@@ -352,6 +395,19 @@ export async function setupMarket(ctx: TestContext, config: MarketSetup = {}) {
         aliceReserveConfig.canBeBorrowed,
         parseAmount(aliceReserveConfig.ltv),
         parseAmount(aliceReserveConfig.liquidationThreshold),
+      ],
+      { account: ctx.addresses.A }
+    )
+  );
+  await waitForReceipt(
+    ctx.publicClient,
+    await ctx.pool.write.setReserveConfig(
+      [
+        ctx.charlieToken.address,
+        charlieReserveConfig.canBeCollateral,
+        charlieReserveConfig.canBeBorrowed,
+        parseAmount(charlieReserveConfig.ltv),
+        parseAmount(charlieReserveConfig.liquidationThreshold),
       ],
       { account: ctx.addresses.A }
     )
@@ -399,6 +455,17 @@ export async function setupMarket(ctx: TestContext, config: MarketSetup = {}) {
     );
   }
 
+  if (reserveCharlie > 0n) {
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.charlieToken.write.approve([ctx.pool.address, reserveCharlie], { account: ctx.addresses.A })
+    );
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.pool.write.deposit([ctx.charlieToken.address, reserveCharlie], { account: ctx.addresses.A })
+    );
+  }
+
   if (flashAlice > 0n) {
     await waitForReceipt(
       ctx.publicClient,
@@ -421,6 +488,17 @@ export async function setupMarket(ctx: TestContext, config: MarketSetup = {}) {
     );
   }
 
+  if (flashCharlie > 0n) {
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.charlieToken.write.approve([ctx.flashPool.address, flashCharlie], { account: ctx.addresses.A })
+    );
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.flashPool.write.deposit([ctx.charlieToken.address, flashCharlie], { account: ctx.addresses.A })
+    );
+  }
+
   await waitForReceipt(
     ctx.publicClient,
     await ctx.aliceToken.write.approve([ctx.flashSwap.address, swapAlice], { account: ctx.addresses.A })
@@ -431,12 +509,22 @@ export async function setupMarket(ctx: TestContext, config: MarketSetup = {}) {
   );
   await waitForReceipt(
     ctx.publicClient,
+    await ctx.charlieToken.write.approve([ctx.flashSwap.address, swapCharlie], { account: ctx.addresses.A })
+  );
+  await waitForReceipt(
+    ctx.publicClient,
     await ctx.flashSwap.write.addLiquidity([ctx.aliceToken.address, swapAlice], { account: ctx.addresses.A })
   );
   await waitForReceipt(
     ctx.publicClient,
     await ctx.flashSwap.write.addLiquidity([ctx.bobToken.address, swapBob], { account: ctx.addresses.A })
   );
+  if (swapCharlie > 0n) {
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.flashSwap.write.addLiquidity([ctx.charlieToken.address, swapCharlie], { account: ctx.addresses.A })
+    );
+  }
 }
 
 export async function createAliceBobFixture() {
@@ -508,7 +596,7 @@ export async function setupIncentivesMarket(ctx: TestContext) {
 
 export async function setPrices(
   ctx: TestContext,
-  prices: { alicePrice: AmountInput; bobPrice: AmountInput }
+  prices: { alicePrice: AmountInput; bobPrice: AmountInput; charliePrice?: AmountInput }
 ) {
   await waitForReceipt(
     ctx.publicClient,
@@ -519,6 +607,12 @@ export async function setPrices(
   await waitForReceipt(
     ctx.publicClient,
     await ctx.oracle.write.setPrice([ctx.bobToken.address, parseAmount(prices.bobPrice)], {
+      account: ctx.addresses.A,
+    })
+  );
+  await waitForReceipt(
+    ctx.publicClient,
+    await ctx.oracle.write.setPrice([ctx.charlieToken.address, parseAmount(prices.charliePrice ?? "1")], {
       account: ctx.addresses.A,
     })
   );

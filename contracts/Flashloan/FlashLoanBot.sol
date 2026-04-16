@@ -134,6 +134,38 @@ contract FlashLoanBot is IFlashLoanReceiver {
             return;
         }
 
+        if (
+            collateralAsset == address(swap.aliceToken()) &&
+            token == address(swap.charlieToken())
+        ) {
+            swap.swapAliceToCharlie(collateralReceived);
+            return;
+        }
+
+        if (
+            collateralAsset == address(swap.charlieToken()) &&
+            token == address(swap.aliceToken())
+        ) {
+            swap.swapCharlieToAlice(collateralReceived);
+            return;
+        }
+
+        if (
+            collateralAsset == address(swap.bobToken()) &&
+            token == address(swap.charlieToken())
+        ) {
+            swap.swapBobToCharlie(collateralReceived);
+            return;
+        }
+
+        if (
+            collateralAsset == address(swap.charlieToken()) &&
+            token == address(swap.bobToken())
+        ) {
+            swap.swapCharlieToBob(collateralReceived);
+            return;
+        }
+
         revert("Unsupported swap pair");
     }
 
