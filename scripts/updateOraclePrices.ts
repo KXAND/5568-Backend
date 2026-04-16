@@ -1,28 +1,24 @@
 import hre from "hardhat";
-import { createPublicClient, createWalletClient, http, parseAbi } from "viem";
-import { hardhat } from "viem/chains";
-import { privateKeyToAccount } from "viem/accounts";
+import { deploy } from "./deploy.js";
 
 interface TokenPrice {
   name: string;
-  address: string;
   coingeckoId: string;
-  decimals: number;
 }
 
-// 配置代币信息
-const TOKENS: Record<string, TokenPrice> = {
-  USDC: {
-    name: "USDC",
-    address: "0x0000000000000000000000000000000000000000", // 替换为实际地址
+interface TokenWithAddress extends TokenPrice {
+  address: `0x${string}`;
+}
+
+// 价格来源配置（地址来自 deploy.ts）
+const TOKENS: Record<"ALC" | "BOB", TokenPrice> = {
+  ALC: {
+    name: "ALC",
     coingeckoId: "usd-coin",
-    decimals: 6,
   },
-  ETH: {
-    name: "ETH",
-    address: "0x0000000000000000000000000000000000000001", // 替换为实际地址
+  BOB: {
+    name: "BOB",
     coingeckoId: "ethereum",
-    decimals: 18,
   },
 };
 
@@ -51,64 +47,41 @@ async function getPriceFromCoinGecko(coingeckoId: string): Promise<number> {
 /**
  * 将价格转换为1e18标度
  * @param price USD价格
- * @param decimals 代币小数位
  * @returns 缩放后的价格
  */
-function scalePrice(price: number, decimals: number): bigint {
-  // 价格缩放到1e18
-  // 例如: $1 USD = 1e18
-  // ETH价格在$3000时 = 3000e18
-  const scaledPrice = price * Math.pow(10, 18 - decimals);
+function scalePrice(price: number): bigint {
+  // 价格缩放到1e18，例如: $1 => 1e18, $3000 => 3000e18
+  const scaledPrice = price * 1e18;
   return BigInt(Math.floor(scaledPrice));
-}
-
-/**
- * 从环境变量读取Oracle地址
- */
-function getOracleAddress(): string {
-  const oracleAddress = process.env.ORACLE_ADDRESS;
-  if (!oracleAddress) {
-    throw new Error("请设置 ORACLE_ADDRESS 环境变量");
-  }
-  return oracleAddress;
 }
 
 /**
  * 主函数：获取价格并写入Oracle
  */
 async function updateOraclePrices() {
-  console.log(" 开始更新Oracle价格...\n");
+  console.log("开始更新Oracle价格...\n");
 
   try {
-    // 连接到网络
-    const publicClient = createPublicClient({
-      chain: hardhat,
-      transport: http("http://127.0.0.1:8545"),
-    });
+    const { viem } = await hre.network.connect({ network: "localhost" });
+    const publicClient = await viem.getPublicClient();
+    const [deployer] = await viem.getWalletClients();
 
-    const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
-    if (!privateKey || !privateKey.startsWith("0x")) {
-      throw new Error(
-        "PRIVATE_KEY environment variable not set or invalid. Set it before running."
-      );
-    }
+    // 使用 deploy.ts 的返回地址，避免手工维护地址
+    const deployed = await deploy({ viem });
+    const oracle = await viem.getContractAt("SimpleOracle", deployed.oracle);
 
-    const account = privateKeyToAccount(privateKey);
+    const tokensWithAddress: TokenWithAddress[] = [
+      { ...TOKENS.ALC, address: deployed.aliceToken },
+      { ...TOKENS.BOB, address: deployed.bobToken },
+    ];
 
-    const walletClient = createWalletClient({
-      account,
-      chain: hardhat,
-      transport: http("http://127.0.0.1:8545"),
-    });
-
-    console.log(`✓ 连接账户: ${account.address}\n`);
-
-    // 获取Oracle合约地址
-    const oracleAddress = getOracleAddress();
-    console.log(`✓ Oracle地址: ${oracleAddress}\n`);
+    console.log(`✓ 连接账户: ${deployer.account.address}`);
+    console.log(`✓ Oracle地址: ${deployed.oracle}`);
+    console.log(`✓ AliceToken地址: ${deployed.aliceToken}`);
+    console.log(`✓ BobToken地址: ${deployed.bobToken}\n`);
 
     // 更新每个代币的价格
-    for (const [, tokenInfo] of Object.entries(TOKENS)) {
+    for (const tokenInfo of tokensWithAddress) {
       console.log(`📝 更新 ${tokenInfo.name}...`);
 
       try {
@@ -117,19 +90,16 @@ async function updateOraclePrices() {
         console.log(`  - USD价格: $${priceUsd}`);
 
         // 缩放价格
-        const scaledPrice = scalePrice(priceUsd, tokenInfo.decimals);
+        const scaledPrice = scalePrice(priceUsd);
         console.log(`  - 缩放价格 (1e18): ${scaledPrice}`);
 
         // 写入Oracle
-        const tx = await walletClient.writeContract({
-          address: oracleAddress as `0x${string}`,
-          abi: parseAbi([
-            "function setPrice(address token, uint256 price) public",
-          ]),
-          functionName: "setPrice",
-          args: [tokenInfo.address as `0x${string}`, BigInt(scaledPrice)],
+        const tx = await oracle.write.setPrice([tokenInfo.address, scaledPrice], {
+          account: deployer.account.address,
         });
         console.log(`  ✓ 交易已提交: ${tx}`);
+        await publicClient.waitForTransactionReceipt({ hash: tx });
+        console.log("  ✓ 交易已确认");
         console.log();
       } catch (error) {
         console.error(`  ✗ 失败: ${error}\n`);
