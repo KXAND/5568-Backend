@@ -249,14 +249,17 @@ describe("LendingPool Collateral Flow", () => {
       const vaultId = await pool.read.nextDebtVaultId();
       await pool.write.openDebtVault({ account: user });
 
-      // Deposit both as collateral
+      // Deposit Alice as collateral (Bob is borrow-only in this fixture)
       await pool.write.depositCollateral(
         [vaultId, aliceToken.address, aliceAmount],
         { account: user }
       );
-      await pool.write.depositCollateral(
-        [vaultId, bobToken.address, bobAmount],
-        { account: user }
+
+      await assert.rejects(
+        pool.write.depositCollateral([vaultId, bobToken.address, bobAmount], {
+          account: user,
+        }),
+        /Internal error|revert/i
       );
 
       // Get collateral assets list
@@ -266,8 +269,8 @@ describe("LendingPool Collateral Flow", () => {
 
       assert.strictEqual(
         collateralAssets.length,
-        2n,
-        `Should have 2 collateral assets, got ${collateralAssets.length}`
+        1,
+        `Should have 1 collateral asset, got ${collateralAssets.length}`
       );
 
       // Verify addresses are included
@@ -279,7 +282,7 @@ describe("LendingPool Collateral Flow", () => {
       );
 
       assert.ok(hasAlice, "ALC should be in collateral assets");
-      assert.ok(hasBob, "BOB should be in collateral assets");
+      assert.ok(!hasBob, "BOB should not be in collateral assets under this fixture");
 
       console.log(`✅ Test: Verified ${collateralAssets.length} collateral assets`);
     });

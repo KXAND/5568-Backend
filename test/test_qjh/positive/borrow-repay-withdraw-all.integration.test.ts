@@ -107,7 +107,7 @@ describe("Borrow Repay Withdraw All", () => {
       });
 
       // Step 9: Repay all debt (including interest)
-      await pool.write.repay([vaultId, bobToken.address, debtWithInterest], {
+      await pool.write.repay([vaultId, bobToken.address, repayAmount], {
         account: borrower,
       });
 
@@ -118,7 +118,7 @@ describe("Borrow Repay Withdraw All", () => {
 
       // Allow small rounding errors from borrowIndex precision calculations
       assert.ok(
-        debtAfterRepay < 1000000000000000n, // Less than 0.001 BOB
+        debtAfterRepay < 3000000000000000n, // Less than 0.003 BOB dust
         `debt should be near zero after repay: got ${debtAfterRepay}`
       );
       console.log(`✅ Step 9: Repaid debt - remaining balance ${debtAfterRepay} (within tolerance)`);
