@@ -245,7 +245,7 @@ describe("Display Flow Validation - Bob Collateral Alice Borrow", () => {
       const borrower = ctx.addresses.C;
       const aliceCollateralAmount = parseAmount("300");
       const bobCollateralAmount = parseAmount("0.2");
-      const charlieBorrowAmount = parseAmount("500");
+      const charlieBorrowAmount = parseAmount("560");
 
       await setupMarket(ctx, {
         initialAlicePrice: "1",
@@ -295,10 +295,11 @@ describe("Display Flow Validation - Bob Collateral Alice Borrow", () => {
       await ctx.pool.write.depositCollateral([vaultId, ctx.bobToken.address, bobCollateralAmount], { account: borrower });
       await ctx.pool.write.borrow([vaultId, ctx.charlieToken.address, charlieBorrowAmount], { account: borrower });
 
-      await setPrices(ctx, { alicePrice: "1", bobPrice: "1000", charliePrice: "1" });
+      await setPrices(ctx, { alicePrice: "1", bobPrice: "1650", charliePrice: "1" });
       const before = await readVaultState(ctx, vaultId, "charlie");
       const beforeHf = toFloat18(before.hf);
       assert.ok(beforeHf < 1, `Part 4 HF before liquidation should be < 1, got ${beforeHf.toFixed(6)}`);
+      assertNear(beforeHf, 0.95625, HF_TOLERANCE, "Part 4 HF before liquidation");
 
       const flashResult = await flashLiquidate(ctx, {
         vaultId,
@@ -313,6 +314,7 @@ describe("Display Flow Validation - Bob Collateral Alice Borrow", () => {
       assert.ok(after.debt < before.debt, "Part 4 debt should decrease after CHL flash liquidation");
       assert.ok(flashResult.feeEarned > 0n, "Part 4 flash pool should earn Charlie fee");
       assert.ok(afterHf > beforeHf, "Part 4 HF should improve after CHL flash liquidation");
+      assertNear(afterHf, 1.00935, HF_TOLERANCE, "Part 4 HF after liquidation");
     });
   });
 });
