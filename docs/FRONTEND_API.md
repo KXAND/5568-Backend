@@ -192,7 +192,12 @@ File: `contracts/Oracle.sol`
 
 ### Public Functions
 
-No frontend-facing write functions in normal user flows.
+- `setPrice(address asset, uint256 price)`
+  Version: 0.0.1
+  Purpose: set the price of an asset (owner-only).
+  Inputs: `asset`: token address. `price`: price scaled by `1e18`.
+  Output: none.
+
 
 ---
 
