@@ -72,8 +72,8 @@ export async function runProtocolFeesDemo(params: RunProtocolFeesDemoParams) {
   console.log(
     "Protocol fee config: reserveFactorBps =",
     reserveFactor.toString(),
-    "protocolLiquidationCutBps =",
-    (await pool.read.protocolLiquidationCutBps()).toString()
+    "getProtocolLiquidationCutBps =",
+    (await pool.read.getProtocolLiquidationCutBps()).toString()
   );
 
   await createDebtVault(

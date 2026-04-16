@@ -2,6 +2,8 @@
 
 ## Recent Changes
 
+- 2026/4/17 5:05: rename `protocolLiquidationCutBps()` into `getProtocolLiquidationCutBps()`
+
 ## Overview
 
 `LendingPool` is the main protocol entry contract. It owns reserve onboarding, deposit custody, debt-vault lifecycle, borrowing, repayment, liquidation, reserve-fee accounting, and reward-action forwarding.
@@ -55,7 +57,7 @@ flowchart LR
   File: `contracts/LendingPool.sol`
   Returns: liquidation bonus in basis points.
 
-- `protocolLiquidationCutBps() -> uint256`
+- `getProtocolLiquidationCutBps() -> uint256`
   File: `contracts/LendingPool.sol`
   Returns: protocol share of liquidation bonus in basis points.
 
