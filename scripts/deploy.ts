@@ -78,6 +78,22 @@ export async function deploy(options: DeployOptions) {
   );
   const bobToken = await viem.getContractAt("BobToken", await bobFaucet.read.token());
 
+  const issuer = await viem.deployContract("TokenIssuer", [], {
+    client: { wallet: deployer },
+  });
+  const charlieInitial = 1_000_000n * 10n ** 18n;
+  await issuer.write.issueToken(
+    [
+      "Charlie Token",
+      "CHR",
+      deployer.account.address,
+      deployer.account.address,
+      charlieInitial,
+    ],
+    { account: deployer.account.address }
+  );
+  const charlieTokenAddress = await issuer.read.getTokenByName(["Charlie Token"]);
+
   const pool = await viem.deployContract("LendingPool", [oracle.address], {
     client: { wallet: deployer },
     libraries: {
@@ -133,6 +149,12 @@ export async function deploy(options: DeployOptions) {
     account: deployer.account.address,
   });
 
+  const tokensByName = {
+    "Alice": aliceToken.address,
+    "Bob": bobToken.address,
+    "Charlie": charlieTokenAddress,
+  } as const;
+
   if (log) {
     console.log("ReserveLogic:", reserveLogic.address);
     console.log("DebtVaultLogic:", debtVaultLogic.address);
@@ -145,6 +167,8 @@ export async function deploy(options: DeployOptions) {
     console.log("AliceToken:", aliceToken.address);
     console.log("BobFaucet:", bobFaucet.address);
     console.log("BobToken:", bobToken.address);
+    console.log("TokenIssuer:", issuer.address);
+    console.log("CharlieToken:", charlieTokenAddress);
     console.log("LendingPool:", pool.address);
     console.log("FlashLoanPool:", flashPool.address);
     console.log("FlashLoanSwap:", flashSwap.address);
@@ -161,6 +185,8 @@ export async function deploy(options: DeployOptions) {
     borrowLogic: borrowLogic.address,
     oracle: oracle.address,
     interestRateModel: irm.address,
+    issuer: issuer.address,
+    tokensByName,
     aliceFaucet: aliceFaucet.address,
     aliceToken: aliceToken.address,
     bobFaucet: bobFaucet.address,
