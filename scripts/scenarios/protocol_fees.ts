@@ -87,13 +87,15 @@ export async function runProtocolFeesDemo(params: RunProtocolFeesDemoParams) {
   );
 
   await increaseTime(publicClient, 3600);
+  // Use a full token unit here. Tiny amounts like 1 wei may round to 0 shares when liquidityIndex > 1e18.
+  const accrueTriggerDepositAmount = one;
   await waitForReceipt(
     publicClient,
-    await aliceToken.write.approve([pool.address, 1n], { account: ownerAddress })
+    await aliceToken.write.approve([pool.address, accrueTriggerDepositAmount], { account: ownerAddress })
   );
   await waitForReceipt(
     publicClient,
-    await pool.write.deposit([aliceToken.address, 1n], { account: ownerAddress })
+    await pool.write.deposit([aliceToken.address, accrueTriggerDepositAmount], { account: ownerAddress })
   );
 
   const accruedAfter = await pool.read.getAccruedProtocolFees([aliceToken.address]);
@@ -146,7 +148,7 @@ export async function runProtocolFeesDemo(params: RunProtocolFeesDemoParams) {
 
   await waitForReceipt(
     publicClient,
-    await oracle.write.setPrice([bobToken.address, one], { account: ownerAddress })
+    await oracle.write.setPrice([bobToken.address, one / 2n], { account: ownerAddress })
   );
 
   await waitForReceipt(
