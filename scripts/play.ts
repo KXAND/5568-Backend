@@ -2,6 +2,7 @@ import { parseEventLogs } from "viem";
 import { network } from "hardhat";
 import { deploy } from "./deploy.js";
 import { runIncentivesDemo } from "./scenarios/incentives.js";
+import { runProtocolFeesDemo } from "./scenarios/protocol_fees.js";
 
 const ONE = 10n ** 18n;
 const BOB_PRICE_HEALTHY = 2n * ONE;
@@ -378,10 +379,28 @@ async function main() {
     setPrices,
     createDebtVault,
   });
+
+  printSection("Part 6: Protocol Fee Demo");
+  await runProtocolFeesDemo({
+    pool,
+    publicClient,
+    aliceToken,
+    bobToken,
+    oracle,
+    ownerAddress: a,
+    treasuryAddress: b,
+    borrowerClient: C,
+    one: ONE,
+    healthyBobPrice: BOB_PRICE_HEALTHY,
+    waitForReceipt,
+    setPrices,
+    createDebtVault,
+  });
 }
 
 main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
 

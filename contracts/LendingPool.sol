@@ -17,19 +17,24 @@ import {ConfigLogic} from "./logic/ConfigLogic.sol";
 import {DepositLogic} from "./logic/DepositLogic.sol";
 import {BorrowLogic} from "./logic/BorrowLogic.sol";
 import {LiquidationLogic} from "./logic/LiquidationLogic.sol";
-import {IPoolIncentivesController} from "./incentives/PoolIncentivesController.sol";
+import {
+    IPoolIncentivesController
+} from "./incentives/PoolIncentivesController.sol";
 
 contract LendingPool is Ownable {
     using SafeERC20 for IERC20;
 
     uint256 public constant RAY = 1e18;
     uint256 public constant BPS = 10_000;
+    uint256 public constant DEFAULT_RESERVE_FACTOR_BPS = 500;
     uint8 public constant DEPOSIT_REWARD_TYPE = 0;
     uint8 public constant BORROW_REWARD_TYPE = 1;
 
     SimpleOracle public oracle;
     IPoolIncentivesController public poolIncentivesController;
+    address public treasury;
     uint256 public liquidationBonus = 500;
+    uint256 private protocolLiquidationBonusCutBps = 1000;
     uint256 public closeFactor = 5000;
     uint256 public nextDebtVaultId = 1;
 
@@ -49,6 +54,8 @@ contract LendingPool is Ownable {
     mapping(address => mapping(address => uint256)) private custodiedShares;
     mapping(address => mapping(address => uint256)) private lockedShares;
     mapping(address => mapping(address => uint256)) private userDebtPrincipal;
+    mapping(address => uint256) private reserveFactorBps;
+    mapping(address => uint256) private accruedProtocolFees;
     event ReserveConfigUpdated(
         address indexed asset,
         bool canBeCollateral,
@@ -59,8 +66,17 @@ contract LendingPool is Ownable {
     event SetInterestRateModel(address indexed asset, address indexed newModel);
     event SetOracle(address newOracle);
     event SetPoolIncentivesController(address newController);
+    event SetTreasury(address newTreasury);
+    event SetReserveFactorBps(address indexed asset, uint256 bps);
+    event SetProtocolLiquidationCutBps(uint256 bps);
     event SetLiquidationBonus(uint256 bonus);
     event FundReserve(address indexed asset, uint256 amount);
+    event ProtocolFeesAccrued(address indexed asset, uint256 amount);
+    event ProtocolFeesCollected(
+        address indexed asset,
+        address indexed to,
+        uint256 amount
+    );
     event Borrow(
         address indexed user,
         uint256 indexed debtVaultId,
@@ -83,6 +99,7 @@ contract LendingPool is Ownable {
     constructor(address _oracle) Ownable(msg.sender) {
         require(_oracle != address(0), "LendingPool: bad oracle");
         oracle = SimpleOracle(_oracle);
+        treasury = msg.sender;
     }
 
     function addReserve(
@@ -95,6 +112,56 @@ contract LendingPool is Ownable {
         string calldata aTokenName,
         string calldata aTokenSymbol
     ) external onlyOwner {
+        _addReserve(
+            asset,
+            interestRateModel,
+            canBeCollateral,
+            canBeBorrowed,
+            ltv,
+            liquidationThreshold,
+            aTokenName,
+            aTokenSymbol,
+            DEFAULT_RESERVE_FACTOR_BPS
+        );
+    }
+
+    function addReserve(
+        address asset,
+        address interestRateModel,
+        bool canBeCollateral,
+        bool canBeBorrowed,
+        uint256 ltv,
+        uint256 liquidationThreshold,
+        string calldata aTokenName,
+        string calldata aTokenSymbol,
+        uint256 reserveFactorBps_
+    ) external onlyOwner {
+        _addReserve(
+            asset,
+            interestRateModel,
+            canBeCollateral,
+            canBeBorrowed,
+            ltv,
+            liquidationThreshold,
+            aTokenName,
+            aTokenSymbol,
+            reserveFactorBps_
+        );
+    }
+
+    function _addReserve(
+        address asset,
+        address interestRateModel,
+        bool canBeCollateral,
+        bool canBeBorrowed,
+        uint256 ltv,
+        uint256 liquidationThreshold,
+        string calldata aTokenName,
+        string calldata aTokenSymbol,
+        uint256 reserveFactorBps_
+    ) internal {
+        require(reserveFactorBps_ <= BPS, "LendingPool: bad reserve factor");
+
         LendingPoolTypes.AddReserveParams memory params = LendingPoolTypes
             .AddReserveParams({
                 asset: asset,
@@ -116,6 +183,8 @@ contract LendingPool is Ownable {
             msg.sender,
             address(this)
         );
+
+        reserveFactorBps[asset] = reserveFactorBps_;
     }
 
     function setReserveConfig(
@@ -153,6 +222,28 @@ contract LendingPool is Ownable {
     ) external onlyOwner {
         poolIncentivesController = IPoolIncentivesController(newController);
         emit SetPoolIncentivesController(newController);
+    }
+
+    function setTreasury(address newTreasury) external onlyOwner {
+        require(newTreasury != address(0), "LendingPool: bad treasury");
+        treasury = newTreasury;
+        emit SetTreasury(newTreasury);
+    }
+
+    function setReserveFactorBps(
+        address asset,
+        uint256 bps_
+    ) external onlyOwner {
+        _getReserve(asset);
+        require(bps_ <= BPS, "LendingPool: bad reserve factor");
+        reserveFactorBps[asset] = bps_;
+        emit SetReserveFactorBps(asset, bps_);
+    }
+
+    function setProtocolLiquidationCutBps(uint256 bps_) external onlyOwner {
+        require(bps_ <= BPS, "LendingPool: bad liquidation cut");
+        protocolLiquidationBonusCutBps = bps_;
+        emit SetProtocolLiquidationCutBps(bps_);
     }
 
     function setInterestRateModel(
@@ -199,10 +290,12 @@ contract LendingPool is Ownable {
                 collateralAsset: collateralAsset,
                 repayAmount: repayAmount,
                 liquidationBonus: liquidationBonus,
+                protocolLiquidationBonusCutBps: protocolLiquidationBonusCutBps,
                 closeFactor: closeFactor,
                 bps: BPS,
                 ray: RAY,
-                liquidator: msg.sender
+                liquidator: msg.sender,
+                treasury: treasury
             });
 
         LiquidationLogic.executeLiquidation(
@@ -415,6 +508,47 @@ contract LendingPool is Ownable {
         emit Repay(msg.sender, debtVaultId, asset, repayAmount);
     }
 
+    function getReserveFactorBps(
+        address asset
+    ) external view returns (uint256) {
+        _getReserve(asset);
+        return reserveFactorBps[asset];
+    }
+
+    function getAccruedProtocolFees(
+        address asset
+    ) external view returns (uint256) {
+        _getReserve(asset);
+        return accruedProtocolFees[asset];
+    }
+
+    function protocolLiquidationCutBps() external view returns (uint256) {
+        return protocolLiquidationBonusCutBps;
+    }
+
+    function collectProtocolFees(
+        address asset,
+        uint256 amount,
+        address to
+    ) external onlyOwner {
+        _getReserve(asset);
+        require(to != address(0), "LendingPool: bad to");
+        require(amount > 0, "LendingPool: amount=0");
+        require(
+            accruedProtocolFees[asset] >= amount,
+            "LendingPool: insufficient protocol fees"
+        );
+        require(
+            _availableLiquidity(asset) >= amount,
+            "LendingPool: insufficient liquidity"
+        );
+
+        accruedProtocolFees[asset] -= amount;
+        IERC20(asset).safeTransfer(to, amount);
+
+        emit ProtocolFeesCollected(asset, to, amount);
+    }
+
     function getReserveAToken(address asset) external view returns (address) {
         return address(_getReserve(asset).aToken);
     }
@@ -469,14 +603,14 @@ contract LendingPool is Ownable {
                 uint256 liquidationThresholdValue,
                 uint256 debtValue
             ) = DebtVaultLogic.getDebtVaultValues(
-                debtVaults,
-                debtVaultCollateralAssets,
-                borrowedAssetsInDebtVault,
-                reserves,
-                oracle,
-                vaultId,
-                RAY
-            );
+                    debtVaults,
+                    debtVaultCollateralAssets,
+                    borrowedAssetsInDebtVault,
+                    reserves,
+                    oracle,
+                    vaultId,
+                    RAY
+                );
             candidates[i] = LiquidationTable({
                 debtVaultId: vaultId,
                 borrower: debtVaults[vaultId].borrower,
@@ -724,12 +858,18 @@ contract LendingPool is Ownable {
         address asset,
         LendingPoolTypes.Reserve storage reserve
     ) internal {
-        ReserveLogic.executeAccrueInterest(
+        uint256 factorRay = (reserveFactorBps[asset] * RAY) / BPS;
+        (, uint256 protocolInterest) = ReserveLogic.executeAccrueInterest(
             asset,
             reserve,
             _availableLiquidity(asset),
-            RAY
+            RAY,
+            factorRay
         );
+        if (protocolInterest > 0) {
+            accruedProtocolFees[asset] += protocolInterest;
+            emit ProtocolFeesAccrued(asset, protocolInterest);
+        }
     }
 
     function _availableLiquidity(

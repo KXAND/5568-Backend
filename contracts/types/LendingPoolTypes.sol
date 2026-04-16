@@ -22,10 +22,12 @@ library LendingPoolTypes {
         address collateralAsset;
         uint256 repayAmount;
         uint256 liquidationBonus;
+        uint256 protocolLiquidationBonusCutBps;
         uint256 closeFactor;
         uint256 bps;
         uint256 ray;
         address liquidator;
+        address treasury;
     }
 
     struct Reserve {

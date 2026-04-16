@@ -73,6 +73,16 @@ library LiquidationLogic {
             params.bps,
             params.ray
         );
+        uint256 baseShares = DebtVaultLogic.getLiquidationShares(
+            reserves,
+            oracle,
+            actualRepayAmount,
+            params.debtAsset,
+            params.collateralAsset,
+            0,
+            params.bps,
+            params.ray
+        );
 
         actualTransferredShares = DebtVaultLogic
             .getActualLiquidationTransferredShares(
@@ -107,9 +117,19 @@ library LiquidationLogic {
         custodiedShares[debtVault.borrower][
             params.collateralAsset
         ] -= actualTransferredShares;
-        custodiedShares[params.liquidator][
-            params.collateralAsset
-        ] += actualTransferredShares;
+        uint256 bonusShares = actualTransferredShares > baseShares
+            ? actualTransferredShares - baseShares
+            : 0;
+        uint256 protocolBonusShares = (bonusShares *
+            params.protocolLiquidationBonusCutBps) / params.bps;
+        uint256 liquidatorShares = actualTransferredShares - protocolBonusShares;
+        custodiedShares[params.liquidator][params.collateralAsset] +=
+            liquidatorShares;
+        if (protocolBonusShares > 0) {
+            custodiedShares[params.treasury][
+                params.collateralAsset
+            ] += protocolBonusShares;
+        }
 
         IERC20(params.debtAsset).safeTransferFrom(
             params.liquidator,
