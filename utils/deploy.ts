@@ -1,3 +1,5 @@
+import { DEPLOY_CONFIG } from "./config.js";
+
 const LIBRARIES = {
   reserve: "project/contracts/logic/ReserveLogic.sol:ReserveLogic",
   debtVault: "project/contracts/logic/DebtVaultLogic.sol:DebtVaultLogic",
@@ -48,32 +50,35 @@ export async function deploy(options: DeployOptions) {
     client: { wallet: deployer },
   });
 
-  const baseRate = 0n;
-  const slope1 = 5_000_000_000_000_000n;
-  const slope2 = 20_000_000_000_000_000n;
-  const kink = 800_000_000_000_000_000n;
   const irm = await viem.deployContract(
     "InterestRateModel",
-    [baseRate, slope1, slope2, kink],
+    [
+      DEPLOY_CONFIG.interestRateModel.baseRate,
+      DEPLOY_CONFIG.interestRateModel.slope1,
+      DEPLOY_CONFIG.interestRateModel.slope2,
+      DEPLOY_CONFIG.interestRateModel.kink,
+    ],
     { client: { wallet: deployer } }
   );
 
-  const aliceInitial = 1_000_000n * 10n ** 18n;
-  const aliceDrip = 100_000n * 10n ** 18n;
-  const aliceCooldown = 60n;
   const aliceFaucet = await viem.deployContract(
     "AliceFaucet",
-    [aliceInitial, aliceDrip, aliceCooldown],
+    [
+      DEPLOY_CONFIG.faucets.alice.initialSupply,
+      DEPLOY_CONFIG.faucets.alice.dripAmount,
+      DEPLOY_CONFIG.faucets.alice.cooldown,
+    ],
     { client: { wallet: deployer } }
   );
   const aliceToken = await viem.getContractAt("AliceToken", await aliceFaucet.read.token());
 
-  const bobInitial = 1_000_000n * 10n ** 18n;
-  const bobDrip = 100_000n * 10n ** 18n;
-  const bobCooldown = 60n;
   const bobFaucet = await viem.deployContract(
     "BobFaucet",
-    [bobInitial, bobDrip, bobCooldown],
+    [
+      DEPLOY_CONFIG.faucets.bob.initialSupply,
+      DEPLOY_CONFIG.faucets.bob.dripAmount,
+      DEPLOY_CONFIG.faucets.bob.cooldown,
+    ],
     { client: { wallet: deployer } }
   );
   const bobToken = await viem.getContractAt("BobToken", await bobFaucet.read.token());
@@ -81,18 +86,19 @@ export async function deploy(options: DeployOptions) {
   const issuer = await viem.deployContract("TokenIssuer", [], {
     client: { wallet: deployer },
   });
-  const charlieInitial = 1_000_000n * 10n ** 18n;
   await issuer.write.issueToken(
     [
-      "Charlie Token",
-      "CHR",
+      DEPLOY_CONFIG.issuedTokens.charlie.name,
+      DEPLOY_CONFIG.issuedTokens.charlie.symbol,
       deployer.account.address,
       deployer.account.address,
-      charlieInitial,
+      DEPLOY_CONFIG.issuedTokens.charlie.initialSupply,
     ],
     { account: deployer.account.address }
   );
-  const charlieTokenAddress = await issuer.read.getTokenByName(["Charlie Token"]);
+  const charlieTokenAddress = await issuer.read.getTokenByName([
+    DEPLOY_CONFIG.issuedTokens.charlie.name,
+  ]);
 
   const pool = await viem.deployContract("LendingPool", [oracle.address], {
     client: { wallet: deployer },
@@ -106,11 +112,29 @@ export async function deploy(options: DeployOptions) {
   });
 
   await pool.write.addReserve(
-    [aliceToken.address, irm.address, false, true, 0n, 0n, "Pool Alice", "pALC"],
+    [
+      aliceToken.address,
+      irm.address,
+      DEPLOY_CONFIG.reserves.alice.canBeCollateral,
+      DEPLOY_CONFIG.reserves.alice.canBeBorrowed,
+      DEPLOY_CONFIG.reserves.alice.ltv,
+      DEPLOY_CONFIG.reserves.alice.liquidationThreshold,
+      DEPLOY_CONFIG.reserves.alice.aTokenName,
+      DEPLOY_CONFIG.reserves.alice.aTokenSymbol,
+    ],
     { account: deployer.account.address }
   );
   await pool.write.addReserve(
-    [bobToken.address, irm.address, true, false, 750_000_000_000_000_000n, 850_000_000_000_000_000n, "Pool Bob", "pBOB"],
+    [
+      bobToken.address,
+      irm.address,
+      DEPLOY_CONFIG.reserves.bob.canBeCollateral,
+      DEPLOY_CONFIG.reserves.bob.canBeBorrowed,
+      DEPLOY_CONFIG.reserves.bob.ltv,
+      DEPLOY_CONFIG.reserves.bob.liquidationThreshold,
+      DEPLOY_CONFIG.reserves.bob.aTokenName,
+      DEPLOY_CONFIG.reserves.bob.aTokenSymbol,
+    ],
     { account: deployer.account.address }
   );
 
@@ -132,10 +156,9 @@ export async function deploy(options: DeployOptions) {
     { client: { wallet: deployer } }
   );
 
-  const poolCoinTotalSupply = 1_919_810n * 10n ** 18n;
   const poolCoin = await viem.deployContract(
     "PoolCoin",
-    [deployer.account.address, poolCoinTotalSupply],
+    [deployer.account.address, DEPLOY_CONFIG.poolCoin.totalSupply],
     { client: { wallet: deployer } }
   );
 
@@ -150,9 +173,9 @@ export async function deploy(options: DeployOptions) {
   });
 
   const tokensByName = {
-    "Alice": aliceToken.address,
-    "Bob": bobToken.address,
-    "Charlie": charlieTokenAddress,
+    Alice: aliceToken.address,
+    Bob: bobToken.address,
+    Charlie: charlieTokenAddress,
   } as const;
 
   if (log) {
