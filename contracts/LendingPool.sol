@@ -24,6 +24,7 @@ import {
 contract LendingPool is Ownable {
     using SafeERC20 for IERC20;
 
+    // #region Constants And State
     uint256 public constant RAY = 1e18;
     uint256 public constant BPS = 10_000;
     uint256 public constant DEFAULT_RESERVE_FACTOR_BPS = 500;
@@ -56,6 +57,9 @@ contract LendingPool is Ownable {
     mapping(address => mapping(address => uint256)) private userDebtPrincipal;
     mapping(address => uint256) private reserveFactorBps;
     mapping(address => uint256) private accruedProtocolFees;
+    // #endregion
+
+    // #region Events
     event ReserveConfigUpdated(
         address indexed asset,
         bool canBeCollateral,
@@ -96,12 +100,18 @@ contract LendingPool is Ownable {
         uint256 shares
     );
 
+    // #endregion
+
+    // #region Constructor
     constructor(address _oracle) Ownable(msg.sender) {
         require(_oracle != address(0), "LendingPool: bad oracle");
         oracle = SimpleOracle(_oracle);
         treasury = msg.sender;
     }
 
+    // #endregion
+
+    // #region Admin Setters
     function addReserve(
         address asset,
         address interestRateModel,
@@ -268,6 +278,15 @@ contract LendingPool is Ownable {
         closeFactor = _closeFactor;
     }
 
+    function fundReserve(address asset, uint256 amount) external onlyOwner {
+        require(amount > 0, "LendingPool: amount=0");
+        require(reserves[asset].enabled, "LendingPool: reserve missing");
+        IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
+        emit FundReserve(asset, amount);
+    }
+    // #endregion
+
+    // #region Liquidation
     function liquidate(
         uint256 debtVaultId,
         address debtAsset,
@@ -310,7 +329,9 @@ contract LendingPool is Ownable {
 
         _updateDebtVaultHealthFactor(debtVaultId);
     }
+    // #endregion
 
+    // #region Deposit And Wallet
     function deposit(address asset, uint256 amount) external {
         LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
         _accrueInterest(asset, reserve);
@@ -367,14 +388,9 @@ contract LendingPool is Ownable {
             msg.sender
         );
     }
+    // #endregion
 
-    function fundReserve(address asset, uint256 amount) external onlyOwner {
-        require(amount > 0, "LendingPool: amount=0");
-        require(reserves[asset].enabled, "LendingPool: reserve missing");
-        IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
-        emit FundReserve(asset, amount);
-    }
-
+    // #region DebtVault Lifecycle
     function openDebtVault() external returns (uint256 debtVaultId) {
         debtVaultId = BorrowLogic.executeOpenDebtVault(
             debtVaults,
@@ -442,7 +458,9 @@ contract LendingPool is Ownable {
         _updateDebtVaultHealthFactor(debtVaultId);
         emit CollateralWithdrawn(debtVaultId, asset, amount, shares);
     }
+    // #endregion
 
+    // #region Borrow And Repay
     function borrow(
         uint256 debtVaultId,
         address asset,
@@ -507,7 +525,9 @@ contract LendingPool is Ownable {
         IERC20(asset).safeTransferFrom(msg.sender, address(this), repayAmount);
         emit Repay(msg.sender, debtVaultId, asset, repayAmount);
     }
+    // #endregion
 
+    // #region Protocol Fee
     function getReserveFactorBps(
         address asset
     ) external view returns (uint256) {
@@ -522,7 +542,7 @@ contract LendingPool is Ownable {
         return accruedProtocolFees[asset];
     }
 
-    function protocolLiquidationCutBps() external view returns (uint256) {
+    function getProtocolLiquidationCutBps() external view returns (uint256) {
         return protocolLiquidationBonusCutBps;
     }
 
@@ -548,7 +568,9 @@ contract LendingPool is Ownable {
 
         emit ProtocolFeesCollected(asset, to, amount);
     }
+    // #endregion
 
+    // #region Reserve Getters
     function getReserveAToken(address asset) external view returns (address) {
         return address(_getReserve(asset).aToken);
     }
@@ -622,6 +644,9 @@ contract LendingPool is Ownable {
         return candidates;
     }
 
+    // #endregion
+
+    // #region DebtVault Getters
     function getOwnerDebtVaultIds(
         address owner_
     ) external view returns (uint256[] memory) {
@@ -749,6 +774,9 @@ contract LendingPool is Ownable {
         return borrowedAssetsInDebtVault[debtVaultId];
     }
 
+    // #endregion
+
+    // #region User Getters
     function getUserCustodiedShares(
         address user,
         address asset
@@ -854,6 +882,9 @@ contract LendingPool is Ownable {
             );
     }
 
+    // #endregion
+
+    // #region Internal Helpers
     function _accrueInterest(
         address asset,
         LendingPoolTypes.Reserve storage reserve
@@ -908,4 +939,5 @@ contract LendingPool is Ownable {
         reserve = reserves[asset];
         require(reserve.enabled, "LendingPool: reserve missing");
     }
+    // #endregion
 }

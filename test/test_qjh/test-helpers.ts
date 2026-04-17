@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { parseEventLogs, parseUnits } from "viem";
 import { network } from "hardhat";
 
-import { deploy } from "../../scripts/deploy.js";
+import { deploy } from "../../utils/deploy.js";
 
 type AmountInput = string | number | bigint;
 type ReserveConfigInput = {
