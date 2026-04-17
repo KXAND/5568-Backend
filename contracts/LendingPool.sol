@@ -335,6 +335,13 @@ contract LendingPool is Ownable {
     function deposit(address asset, uint256 amount) external {
         LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
         _accrueInterest(asset, reserve);
+        _handleRewardAction(
+            msg.sender,
+            asset,
+            DEPOSIT_REWARD_TYPE,
+            reserve.aToken.totalSupply(),
+            custodiedShares[msg.sender][asset]
+        );
         DepositLogic.executeDeposit(
             reserves,
             custodiedShares,
@@ -468,6 +475,14 @@ contract LendingPool is Ownable {
     ) external {
         LendingPoolTypes.Reserve storage reserve = _getReserve(asset);
         _accrueInterest(asset, reserve);
+        address borrower = debtVaults[debtVaultId].borrower;
+        _handleRewardAction(
+            borrower,
+            asset,
+            BORROW_REWARD_TYPE,
+            reserve.totalDebtPrincipal,
+            userDebtPrincipal[borrower][asset]
+        );
         BorrowLogic.executeBorrow(
             reserves,
             debtVaults,
@@ -941,3 +956,5 @@ contract LendingPool is Ownable {
     }
     // #endregion
 }
+
+

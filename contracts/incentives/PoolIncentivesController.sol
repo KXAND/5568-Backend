@@ -156,11 +156,7 @@ contract PoolIncentivesController is Ownable, IPoolIncentivesController {
         uint256 previousUserIndex = userIndex[rewardKey][user];
         userIndex[rewardKey][user] = nextIndex;
 
-        if (
-            previousUserIndex == 0 ||
-            nextIndex == previousUserIndex ||
-            userPrincipal == 0
-        ) {
+        if (nextIndex == previousUserIndex || userPrincipal == 0) {
             return;
         }
 
