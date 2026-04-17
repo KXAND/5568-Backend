@@ -32,6 +32,7 @@ export const DEPLOY_CONFIG = {
       liquidationThreshold: 0n,
       aTokenName: "Pool Alice",
       aTokenSymbol: "pALC",
+      reserveFactorBps: 500n,
     },
     bob: {
       canBeCollateral: true,
@@ -40,7 +41,19 @@ export const DEPLOY_CONFIG = {
       liquidationThreshold: 850_000_000_000_000_000n,
       aTokenName: "Pool Bob",
       aTokenSymbol: "pBOB",
+      reserveFactorBps: 500n,
     },
+  },
+  lendingPool: {
+    liquidationBonus: 500n,
+    protocolLiquidationCutBps: 1000n,
+    closeFactorBps: 5000n,
+  },
+  flashLoanPool: {
+    feeRate: 1n,
+  },
+  flashLoanSwap: {
+    exchangeRate: 1_500_000_000_000_000_000n,
   },
   poolCoin: {
     totalSupply: 1_919_810n * 10n ** 18n,

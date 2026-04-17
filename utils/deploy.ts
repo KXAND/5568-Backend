@@ -121,6 +121,7 @@ export async function deploy(options: DeployOptions) {
       DEPLOY_CONFIG.reserves.alice.liquidationThreshold,
       DEPLOY_CONFIG.reserves.alice.aTokenName,
       DEPLOY_CONFIG.reserves.alice.aTokenSymbol,
+      DEPLOY_CONFIG.reserves.alice.reserveFactorBps,
     ],
     { account: deployer.account.address }
   );
@@ -134,21 +135,41 @@ export async function deploy(options: DeployOptions) {
       DEPLOY_CONFIG.reserves.bob.liquidationThreshold,
       DEPLOY_CONFIG.reserves.bob.aTokenName,
       DEPLOY_CONFIG.reserves.bob.aTokenSymbol,
+      DEPLOY_CONFIG.reserves.bob.reserveFactorBps,
     ],
     { account: deployer.account.address }
   );
+  await pool.write.setTreasury([deployer.account.address], {
+    account: deployer.account.address,
+  });
+  await pool.write.setLiquidationBonus([DEPLOY_CONFIG.lendingPool.liquidationBonus], {
+    account: deployer.account.address,
+  });
+  await pool.write.setProtocolLiquidationCutBps(
+    [DEPLOY_CONFIG.lendingPool.protocolLiquidationCutBps],
+    { account: deployer.account.address }
+  );
+  await pool.write.setCloseFactor([DEPLOY_CONFIG.lendingPool.closeFactorBps], {
+    account: deployer.account.address,
+  });
 
   const flashPool = await viem.deployContract(
     "FlashLoanPool",
     [aliceToken.address, bobToken.address],
     { client: { wallet: deployer } }
   );
+  await flashPool.write.setFeeRate([DEPLOY_CONFIG.flashLoanPool.feeRate], {
+    account: deployer.account.address,
+  });
 
   const flashSwap = await viem.deployContract(
     "FlashLoanSwap",
     [aliceToken.address, bobToken.address],
     { client: { wallet: deployer } }
   );
+  await flashSwap.write.setExchangeRate([DEPLOY_CONFIG.flashLoanSwap.exchangeRate], {
+    account: deployer.account.address,
+  });
 
   const flashBot = await viem.deployContract(
     "FlashLoanBot",
