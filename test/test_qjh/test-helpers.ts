@@ -85,10 +85,14 @@ export type IncentivesFlowResult = {
   depositAfter: bigint;
   repayBefore: bigint;
   repayAfter: bigint;
+  ownerUnclaimedBeforeClaim: bigint;
+  borrowerUnclaimedBeforeClaim: bigint;
   ownerPoolBefore: bigint;
   ownerPoolAfter: bigint;
   borrowerPoolBefore: bigint;
   borrowerPoolAfter: bigint;
+  ownerUnclaimedAfterClaim: bigint;
+  borrowerUnclaimedAfterClaim: bigint;
 };
 
 const ONE = 10n ** 18n;
@@ -886,6 +890,8 @@ export async function runIncentivesRewardFlow(
     })
   );
   const repayAfter = await incentives.read.unclaimedRewards([borrowerAddress]);
+  const ownerUnclaimedBeforeClaim = depositAfter;
+  const borrowerUnclaimedBeforeClaim = repayAfter;
 
   const ownerPoolBefore = await poolCoin.read.balanceOf([ctx.addresses.A]);
   if (depositAfter > 0n) {
@@ -897,6 +903,7 @@ export async function runIncentivesRewardFlow(
     );
   }
   const ownerPoolAfter = await poolCoin.read.balanceOf([ctx.addresses.A]);
+  const ownerUnclaimedAfterClaim = await incentives.read.unclaimedRewards([ctx.addresses.A]);
 
   const borrowerPoolBefore = await poolCoin.read.balanceOf([borrowerAddress]);
   if (repayAfter > 0n) {
@@ -908,15 +915,20 @@ export async function runIncentivesRewardFlow(
     );
   }
   const borrowerPoolAfter = await poolCoin.read.balanceOf([borrowerAddress]);
+  const borrowerUnclaimedAfterClaim = await incentives.read.unclaimedRewards([borrowerAddress]);
 
   return {
     depositBefore,
     depositAfter,
     repayBefore,
     repayAfter,
+    ownerUnclaimedBeforeClaim,
+    borrowerUnclaimedBeforeClaim,
     ownerPoolBefore,
     ownerPoolAfter,
     borrowerPoolBefore,
     borrowerPoolAfter,
+    ownerUnclaimedAfterClaim,
+    borrowerUnclaimedAfterClaim,
   };
 }
