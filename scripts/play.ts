@@ -1,5 +1,6 @@
 import { network } from "hardhat";
 import { deploy } from "../utils/deploy.js";
+import { runDepositWithdrawDemo } from "./scenarios/deposit_withdraw.js";
 import { runDirectLiquidationDemo } from "./scenarios/direct_liquidation.js";
 import { runIncentivesDemo } from "./scenarios/incentives.js";
 import { runProtocolFeesDemo } from "./scenarios/protocol_fees.js";
@@ -11,7 +12,8 @@ const ONE = 10n ** 18n;
 const BOB_PRICE_HEALTHY = 2n * ONE;
 const BOB_PRICE_DIRECT_LIQUIDATION = 1n * ONE;
 const BOB_PRICE_MULTI_LIQUIDATION = 985_000_000_000_000_000n;
-//#region utils
+
+// #region Utils
 function formatToken(amount: bigint) {
   return (Number(amount) / 1e18).toFixed(4);
 }
@@ -94,7 +96,7 @@ async function logVaultState(
   console.log(label, "debt =", formatToken(debt), "HF =", formatToken(hf));
   return { debt, hf };
 }
-//#endregion
+// #endregion
 
 async function main() {
   const connection: any = await network.connect({ network: "localhost" });
@@ -114,6 +116,10 @@ async function main() {
   const aliceToken = await viem.getContractAt("AliceToken", deployed.aliceToken);
   const bobToken = await viem.getContractAt("BobToken", deployed.bobToken);
   const pool = await viem.getContractAt("LendingPool", deployed.pool);
+  const bobAToken = await viem.getContractAt(
+    "AToken",
+    await pool.read.getReserveAToken([bobToken.address])
+  );
   const flashPool = await viem.getContractAt("FlashLoanPool", deployed.flashPool);
   const flashSwap = await viem.getContractAt("FlashLoanSwap", deployed.flashSwap);
   const flashBot = await viem.getContractAt("FlashLoanBot", deployed.flashBot);
@@ -138,7 +144,19 @@ async function main() {
     setPrices,
   });
 
-  printSection("Part 2: Direct Liquidation");
+  printSection("Part 2: Deposit And Withdraw Demo");
+  await runDepositWithdrawDemo({
+    pool,
+    bobToken,
+    bobAToken,
+    userClient: B,
+    publicClient,
+    one: ONE,
+    waitForReceipt,
+    assertCondition,
+  });
+
+  printSection("Part 3: Direct Liquidation");
   await runDirectLiquidationDemo({
     pool,
     oracle,
@@ -156,7 +174,7 @@ async function main() {
     logVaultState,
   });
 
-  printSection("Part 3: Single Flash Loan Liquidation");
+  printSection("Part 4: Single Flash Loan Liquidation");
   await runSingleFlashLiquidationDemo({
     pool,
     oracle,
@@ -177,7 +195,7 @@ async function main() {
     logVaultState,
   });
 
-  printSection("Part 4: Repeated Flash Liquidations Until Healthy");
+  printSection("Part 5: Repeated Flash Liquidations Until Healthy");
   await runRepeatedFlashLiquidationDemo({
     pool,
     oracle,
@@ -198,7 +216,7 @@ async function main() {
     logVaultState,
   });
 
-  printSection("Part 5: Pool Incentives Demo");
+  printSection("Part 6: Pool Incentives Demo");
   await runIncentivesDemo({
     viem,
     publicClient,
@@ -216,7 +234,7 @@ async function main() {
     createDebtVault,
   });
 
-  printSection("Part 6: Protocol Fee Demo");
+  printSection("Part 7: Protocol Fee Demo");
   await runProtocolFeesDemo({
     pool,
     publicClient,
