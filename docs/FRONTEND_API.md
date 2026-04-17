@@ -80,6 +80,54 @@ Files:
 
 ---
 
+## TokenIssuer
+
+File: `contracts/helpers/tokenIssuer.sol`
+
+This helper is mainly for local tooling, scripted asset setup, and test environments. It is not part of the normal end-user lending flow.
+
+### Getters
+
+- `faucetConfigs(address token) -> (uint256 dripAmount, uint256 cooldown, bool enabled)`
+  Version: 0.0.1
+  Purpose: return faucet configuration for one issued token.
+  Inputs: `token`: issued token address.
+  Output: drip amount, cooldown, and whether faucet mode is enabled.
+
+- `lastClaimAt(address token, address user) -> uint256`
+  Version: 0.0.1
+  Purpose: return the last faucet claim timestamp of one user for one issued token.
+  Inputs: `token`: issued token address. `user`: wallet address.
+  Output: Unix timestamp.
+
+- `getIssuedTokenCount() -> uint256`
+  Version: 0.0.1
+  Purpose: return how many tokens have been issued by this helper.
+  Inputs: none.
+  Output: issued token count.
+
+- `getIssuedTokenInfo(uint256 index) -> (string name, string symbol, address token, address owner, address initialRecipient, uint256 initialSupply, bool faucetEnabled, uint256 dripAmount, uint256 cooldown)`
+  Version: 0.0.1
+  Purpose: return stored metadata of one issued token by index.
+  Inputs: `index`: issued token index.
+  Output: token metadata, owner/recipient, initial supply, and faucet configuration.
+
+- `getTokenByName(string name_) -> address`
+  Version: 0.0.1
+  Purpose: return the issued token address registered under one token name.
+  Inputs: `name_`: token name.
+  Output: token address, or zero address if not found.
+
+### Public Functions
+
+- `claim(address token)`
+  Version: 0.0.1
+  Purpose: claim faucet tokens for one issued token if faucet mode is enabled and cooldown has passed.
+  Inputs: `token`: issued token address.
+  Output: none.
+
+The owner-only issuance functions are intentionally omitted here because frontend user flows should treat this helper as a development/setup tool rather than a normal user-facing feature.
+
 ## PoolCoin
 
 File: `contracts/token/PoolCoin.sol`
@@ -197,7 +245,6 @@ File: `contracts/Oracle.sol`
   Purpose: set the price of an asset (owner-only).
   Inputs: `asset`: token address. `price`: price scaled by `1e18`.
   Output: none.
-
 
 ---
 
@@ -597,4 +644,3 @@ File: `contracts/Flashloan/FlashLoanBot.sol`
 - Before calling it, the frontend should verify the target debtVault is liquidatable with `healthFactor(debtVaultId) < 1e18`.
 - The bot now targets a `debtVaultId`, not a borrower wallet address.
 - The bot repays with the flash-borrowed debt asset, withdraws seized collateral from lending pool custody, swaps it through `FlashLoanSwap`, and then repays the flash loan.
-

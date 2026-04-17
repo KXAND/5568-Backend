@@ -1,6 +1,6 @@
 import { parseEventLogs } from "viem";
 import { network } from "hardhat";
-import { deploy } from "./deploy.js";
+import { deploy } from "../utils/deploy.js";
 import { runIncentivesDemo } from "./scenarios/incentives.js";
 import { runProtocolFeesDemo } from "./scenarios/protocol_fees.js";
 
@@ -130,7 +130,10 @@ async function executeFlashLiquidation(
     console.log("Bot execution logs:");
     for (const log of botLogs) {
       if ("eventName" in log && log.eventName === "Log") {
-        console.log(" ", log.args.message + ":", log.args.value.toString());
+        const args = log.args as { message?: string; value?: bigint };
+        if (typeof args.message === "string" && typeof args.value === "bigint") {
+          console.log(" ", args.message + ":", args.value.toString());
+        }
       }
     }
   }
@@ -301,7 +304,7 @@ async function main() {
   );
   const flashAfter = await logVaultState(pool, flashVaultId, aliceToken.address, "After flash liquidation");
   const botBobClaimableShares = await pool.read.getUserClaimableShares([flashBot.address, bobToken.address]);
-  console.log("Flash pool fee earned:", formatToken(singleFlash.flashPoolBalanceAfter - singleFlash.flashPoolBalanceBefore), "ALC");
+  console.log("Flash pool fee earned:", formatToken(BigInt(singleFlash.flashPoolBalanceAfter - singleFlash.flashPoolBalanceBefore)), "ALC");
   console.log("Bot ALC after single flash:", formatToken(singleFlash.botAliceAfter));
   console.log("Bot remaining claimable BOB shares:", botBobClaimableShares.toString());
   assertCondition(flashAfter.debt < flashBefore.debt, "Flash liquidation did not reduce debt");
@@ -402,5 +405,3 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
-
-

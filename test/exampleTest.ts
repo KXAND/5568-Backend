@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { network } from "hardhat";
-import { deploy } from "../scripts/deploy.js";
+import { deploy } from "../utils/deploy.js";
 
 const ONE = 10n ** 18n;
 

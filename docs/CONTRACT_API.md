@@ -111,6 +111,150 @@ Files:
 
 ---
 
+## IssuedToken (ERC20)
+
+File: `contracts/helpers/tokenIssuer.sol`
+
+### Getters
+
+- `name() -> string`
+  Version: 0.0.1
+  Purpose: return the issued token name.
+  Inputs: none.
+  Output: token name.
+
+- `symbol() -> string`
+  Version: 0.0.1
+  Purpose: return the issued token symbol.
+  Inputs: none.
+  Output: token symbol.
+
+- `decimals() -> uint8`
+  Version: 0.0.1
+  Purpose: return token decimals.
+  Inputs: none.
+  Output: decimals, usually `18`.
+
+- `totalSupply() -> uint256`
+  Version: 0.0.1
+  Purpose: return current total supply.
+  Inputs: none.
+  Output: total token supply.
+
+- `balanceOf(address account) -> uint256`
+  Version: 0.0.1
+  Purpose: return the token balance of an account.
+  Inputs: `account`: wallet address.
+  Output: token balance.
+
+- `allowance(address owner, address spender) -> uint256`
+  Version: 0.0.1
+  Purpose: return the approved spending amount.
+  Inputs: `owner`: token owner. `spender`: approved spender.
+  Output: allowance amount.
+
+- `owner() -> address`
+  Version: 0.0.1
+  Purpose: return the current token owner.
+  Inputs: none.
+  Output: owner address.
+
+### Public Functions
+
+- `transfer(address to, uint256 amount) -> bool`
+  Version: 0.0.1
+  Purpose: transfer tokens from caller to another address.
+  Inputs: `to`: receiver. `amount`: token amount.
+  Output: `true` on success.
+
+- `approve(address spender, uint256 amount) -> bool`
+  Version: 0.0.1
+  Purpose: approve another address to spend caller tokens.
+  Inputs: `spender`: approved spender. `amount`: allowance amount.
+  Output: `true` on success.
+
+- `transferFrom(address from, address to, uint256 amount) -> bool`
+  Version: 0.0.1
+  Purpose: transfer tokens using allowance.
+  Inputs: `from`: source. `to`: receiver. `amount`: token amount.
+  Output: `true` on success.
+
+- `mint(address to, uint256 amount)` (only owner)
+  Version: 0.0.1
+  Purpose: mint new issued tokens.
+  Inputs: `to`: receiver. `amount`: token amount.
+  Output: none.
+
+---
+
+## TokenIssuer
+
+File: `contracts/helpers/tokenIssuer.sol`
+
+### Getters
+
+- `owner() -> address`
+  Version: 0.0.1
+  Purpose: return the owner of the issuer helper.
+  Inputs: none.
+  Output: owner address.
+
+- `faucetConfigs(address token) -> (uint256 dripAmount, uint256 cooldown, bool enabled)`
+  Version: 0.0.1
+  Purpose: return faucet configuration for one issued token.
+  Inputs: `token`: issued token address.
+  Output: drip amount, cooldown, and whether faucet mode is enabled.
+
+- `lastClaimAt(address token, address user) -> uint256`
+  Version: 0.0.1
+  Purpose: return the last faucet claim timestamp of one user for one issued token.
+  Inputs: `token`: issued token address. `user`: wallet address.
+  Output: Unix timestamp.
+
+- `getIssuedTokenCount() -> uint256`
+  Version: 0.0.1
+  Purpose: return how many tokens have been issued by this helper.
+  Inputs: none.
+  Output: issued token count.
+
+- `getIssuedTokenInfo(uint256 index) -> (string name, string symbol, address token, address owner, address initialRecipient, uint256 initialSupply, bool faucetEnabled, uint256 dripAmount, uint256 cooldown)`
+  Version: 0.0.1
+  Purpose: return stored metadata of one issued token by index.
+  Inputs: `index`: issued token index.
+  Output: token metadata, owner/recipient, initial supply, and faucet configuration.
+
+- `getTokenByName(string name_) -> address`
+  Version: 0.0.1
+  Purpose: return the issued token address registered under one token name.
+  Inputs: `name_`: token name.
+  Output: token address, or zero address if not found.
+
+### Public Functions
+
+- `issueToken(string name_, string symbol_, address owner_, address initialRecipient, uint256 initialSupply) -> address`
+  Version: 0.0.1
+  Purpose: deploy a new mintable ERC20 token and register its metadata in the issuer.
+  Inputs: `name_`: token name. `symbol_`: token symbol. `owner_`: token owner. `initialRecipient`: initial token receiver. `initialSupply`: amount minted on deployment.
+  Output: new token address.
+
+- `issueTokenWithFaucet(string name_, string symbol_, uint256 initialSupply, uint256 dripAmount, uint256 cooldown) -> address`
+  Version: 0.0.1
+  Purpose: deploy a new ERC20 token owned by the issuer itself and enable faucet claims on it.
+  Inputs: `name_`: token name. `symbol_`: token symbol. `initialSupply`: amount minted into issuer custody. `dripAmount`: amount dispensed per claim. `cooldown`: minimum seconds between claims.
+  Output: new token address.
+
+- `claim(address token)`
+  Version: 0.0.1
+  Purpose: claim faucet tokens for one issued token if faucet mode is enabled and cooldown has passed.
+  Inputs: `token`: issued token address.
+  Output: none.
+
+- `refill(address token, uint256 amount)` (only owner)
+  Version: 0.0.1
+  Purpose: mint more faucet inventory for one issued token managed by the issuer.
+  Inputs: `token`: issued token address. `amount`: token amount.
+  Output: none.
+
 ## PoolCoin (ERC20)
 
 File: `contracts/token/PoolCoin.sol`
@@ -918,4 +1062,3 @@ File: `contracts/Flashloan/FlashLoanSwap.sol`
   Purpose: swap Bob input to Alice output at current rate.
   Inputs: `bobAmount`: Bob input amount.
   Output: none.
-
