@@ -2,13 +2,15 @@
 
 ## Recent Changes
 
+- 2026/4/17 17:03 fix: deposit and borrow now call handleAction() as expected;   
+
 ## Overview
 
 This module contains `PoolCoin` and `PoolIncentivesController`.
 
 ## PoolCoin
 
-Fixed-supply governance token. Rewards belong to deposit-side and borrow-side positions, and the current implementation settles them on `withdraw` and `repay`.
+Fixed-supply governance token. Rewards belong to deposit-side and borrow-side positions.
 
 ### Getters
 
@@ -63,6 +65,7 @@ Tracks the user's claimable POOL balance and claim entrypoint.
 ## Notes
 
 - `POOL` is a fixed-supply token minted once in the `PoolCoin` constructor. Claiming rewards transfers from controller balance and does not mint on claim.
-- Reward ownership is still deposit-side / borrow-side, but current implementation only settles rewards from `withdraw` and `repay`.
-- Current bug / known limitation: reward hooks do not yet cover all position-establishing actions such as `deposit` and `borrow`, so the first baseline sync for one reward market may happen later than intended.
-- When one reward market is first touched for one user, the current implementation may only write the user's baseline `userIndex` and not increase `unclaimedRewards` in that call.
+- Deposit-side reward hooks currently run from `deposit` and `withdraw`.
+- Borrow-side reward hooks currently run from `borrow` and `repay`.
+- Deposit-side rewards currently follow the user's custodied / pool-held aToken position, not the full deposit amount shown by total-deposit views.
+- If a user moves deposit ownership out into wallet-held aTokens, incentives still follow the custodied side only.
