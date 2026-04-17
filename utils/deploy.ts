@@ -78,21 +78,20 @@ export async function deploy(options: DeployOptions) {
   );
   const bobToken = await viem.getContractAt("BobToken", await bobFaucet.read.token());
 
+  const charlieInitial = 1_000_000n * 10n ** 18n;
+  const charlieDrip = 100_000n * 10n ** 18n;
+  const charlieCooldown = 60n;
+  const charlieFaucet = await viem.deployContract(
+    "CharlieFaucet",
+    [charlieInitial, charlieDrip, charlieCooldown],
+    { client: { wallet: deployer } }
+  );
+  const charlieToken = await viem.getContractAt("CharlieToken", await charlieFaucet.read.token());
+
   const issuer = await viem.deployContract("TokenIssuer", [], {
     client: { wallet: deployer },
   });
-  const charlieInitial = 1_000_000n * 10n ** 18n;
-  await issuer.write.issueToken(
-    [
-      "Charlie Token",
-      "CHR",
-      deployer.account.address,
-      deployer.account.address,
-      charlieInitial,
-    ],
-    { account: deployer.account.address }
-  );
-  const charlieTokenAddress = await issuer.read.getTokenByName(["Charlie Token"]);
+  const charlieTokenAddress = charlieToken.address;
 
   const pool = await viem.deployContract("LendingPool", [oracle.address], {
     client: { wallet: deployer },
@@ -116,13 +115,13 @@ export async function deploy(options: DeployOptions) {
 
   const flashPool = await viem.deployContract(
     "FlashLoanPool",
-    [aliceToken.address, bobToken.address],
+    [aliceToken.address, bobToken.address, charlieToken.address],
     { client: { wallet: deployer } }
   );
 
   const flashSwap = await viem.deployContract(
     "FlashLoanSwap",
-    [aliceToken.address, bobToken.address],
+    [aliceToken.address, bobToken.address, charlieToken.address],
     { client: { wallet: deployer } }
   );
 
@@ -167,8 +166,9 @@ export async function deploy(options: DeployOptions) {
     console.log("AliceToken:", aliceToken.address);
     console.log("BobFaucet:", bobFaucet.address);
     console.log("BobToken:", bobToken.address);
+    console.log("CharlieFaucet:", charlieFaucet.address);
+    console.log("CharlieToken:", charlieToken.address);
     console.log("TokenIssuer:", issuer.address);
-    console.log("CharlieToken:", charlieTokenAddress);
     console.log("LendingPool:", pool.address);
     console.log("FlashLoanPool:", flashPool.address);
     console.log("FlashLoanSwap:", flashSwap.address);
@@ -191,6 +191,8 @@ export async function deploy(options: DeployOptions) {
     aliceToken: aliceToken.address,
     bobFaucet: bobFaucet.address,
     bobToken: bobToken.address,
+    charlieFaucet: charlieFaucet.address,
+    charlieToken: charlieToken.address,
     pool: pool.address,
     flashPool: flashPool.address,
     flashSwap: flashSwap.address,

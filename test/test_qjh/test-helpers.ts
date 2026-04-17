@@ -358,6 +358,15 @@ export async function setupMarket(ctx: TestContext, config: MarketSetup = {}) {
   const aliceReserveConfig = config.aliceReserveConfig ?? DEFAULT_ALICE_RESERVE_CONFIG;
   const bobReserveConfig = config.bobReserveConfig ?? DEFAULT_BOB_RESERVE_CONFIG;
   const charlieReserveConfig = config.charlieReserveConfig ?? DEFAULT_CHARLIE_RESERVE_CONFIG;
+  
+  // Check if charlie reserve is actually needed
+  const needsCharlieReserve = 
+    reserveCharlie > 0n || 
+    flashCharlie > 0n || 
+    swapCharlie > 0n || 
+    charlieClaims.length > 0 ||
+    (config.charlieReserveConfig !== undefined && 
+     (config.charlieReserveConfig.canBeCollateral || config.charlieReserveConfig.canBeBorrowed));
 
   await setPrices(ctx, {
     alicePrice: initialAlicePrice,
@@ -399,19 +408,7 @@ export async function setupMarket(ctx: TestContext, config: MarketSetup = {}) {
       { account: ctx.addresses.A }
     )
   );
-  await waitForReceipt(
-    ctx.publicClient,
-    await ctx.pool.write.setReserveConfig(
-      [
-        ctx.charlieToken.address,
-        charlieReserveConfig.canBeCollateral,
-        charlieReserveConfig.canBeBorrowed,
-        parseAmount(charlieReserveConfig.ltv),
-        parseAmount(charlieReserveConfig.liquidationThreshold),
-      ],
-      { account: ctx.addresses.A }
-    )
-  );
+  
   await waitForReceipt(
     ctx.publicClient,
     await ctx.pool.write.setReserveConfig(
@@ -425,6 +422,36 @@ export async function setupMarket(ctx: TestContext, config: MarketSetup = {}) {
       { account: ctx.addresses.A }
     )
   );
+
+  // Only setup charlie reserve if needed
+  if (needsCharlieReserve) {
+    // First, add charlie reserve to pool if not already added
+    try {
+      await waitForReceipt(
+        ctx.publicClient,
+        await ctx.pool.write.addReserve(
+          [ctx.charlieToken.address, ctx.deployed.interestRateModel, true, true, 750_000_000_000_000_000n, 850_000_000_000_000_000n, "Pool Charlie", "pCHL"],
+          { account: ctx.addresses.A }
+        )
+      );
+    } catch (e) {
+      // Reserve may already exist, ignore error
+    }
+    
+    await waitForReceipt(
+      ctx.publicClient,
+      await ctx.pool.write.setReserveConfig(
+        [
+          ctx.charlieToken.address,
+          charlieReserveConfig.canBeCollateral,
+          charlieReserveConfig.canBeBorrowed,
+          parseAmount(charlieReserveConfig.ltv),
+          parseAmount(charlieReserveConfig.liquidationThreshold),
+        ],
+        { account: ctx.addresses.A }
+      )
+    );
+  }
 
   if (swapExchangeRate !== undefined) {
     await waitForReceipt(
