@@ -1,14 +1,17 @@
-import { parseEventLogs } from "viem";
 import { network } from "hardhat";
 import { deploy } from "../utils/deploy.js";
+import { runDirectLiquidationDemo } from "./scenarios/direct_liquidation.js";
 import { runIncentivesDemo } from "./scenarios/incentives.js";
 import { runProtocolFeesDemo } from "./scenarios/protocol_fees.js";
+import { runRepeatedFlashLiquidationDemo } from "./scenarios/repeated_flash_liquidation.js";
+import { runSetupDemo } from "./scenarios/setup.js";
+import { runSingleFlashLiquidationDemo } from "./scenarios/single_flash_liquidation.js";
 
 const ONE = 10n ** 18n;
 const BOB_PRICE_HEALTHY = 2n * ONE;
 const BOB_PRICE_DIRECT_LIQUIDATION = 1n * ONE;
 const BOB_PRICE_MULTI_LIQUIDATION = 985_000_000_000_000_000n;
-
+//#region utils
 function formatToken(amount: bigint) {
   return (Number(amount) / 1e18).toFixed(4);
 }
@@ -25,10 +28,7 @@ function assertCondition(condition: boolean, message: string) {
   }
 }
 
-async function waitForReceipt(
-  publicClient: Awaited<ReturnType<Awaited<ReturnType<typeof network.connect>>["viem"]["getPublicClient"]>>,
-  hash: `0x${string}`
-) {
+async function waitForReceipt(publicClient: any, hash: `0x${string}`) {
   await publicClient.waitForTransactionReceipt({ hash });
 }
 
@@ -37,7 +37,7 @@ async function setPrices(
   aliceToken: any,
   bobToken: any,
   account: `0x${string}`,
-  publicClient: Awaited<ReturnType<Awaited<ReturnType<typeof network.connect>>["viem"]["getPublicClient"]>>,
+  publicClient: any,
   bobPrice: bigint
 ) {
   await waitForReceipt(
@@ -57,7 +57,7 @@ async function createDebtVault(
   collateralAmount: bigint,
   borrowAsset: `0x${string}`,
   borrowAmount: bigint,
-  publicClient: Awaited<ReturnType<Awaited<ReturnType<typeof network.connect>>["viem"]["getPublicClient"]>>
+  publicClient: any
 ) {
   const borrowerAddress = borrower.account.address;
   const debtVaultId = await pool.read.nextDebtVaultId();
@@ -94,70 +94,11 @@ async function logVaultState(
   console.log(label, "debt =", formatToken(debt), "HF =", formatToken(hf));
   return { debt, hf };
 }
-
-async function executeFlashLiquidation(
-  flashBot: any,
-  flashPool: any,
-  flashBotAddress: `0x${string}`,
-  aliceToken: any,
-  bobToken: any,
-  debtVaultId: bigint,
-  caller: `0x${string}`,
-  publicClient: Awaited<ReturnType<Awaited<ReturnType<typeof network.connect>>["viem"]["getPublicClient"]>>,
-  borrowAmount: bigint,
-  verboseLogs: boolean
-) {
-  const feeRate = await flashPool.read.feeRate();
-  const expectedFee = (borrowAmount * feeRate) / 10_000n;
-  const flashPoolBalanceBefore = await flashPool.read.getBalance([aliceToken.address]);
-  const botAliceBefore = await aliceToken.read.balanceOf([flashBotAddress]);
-
-  const flashTx = await flashBot.write.borrow(
-    [aliceToken.address, borrowAmount, debtVaultId, bobToken.address],
-    { account: caller }
-  );
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: flashTx });
-
-  if (verboseLogs) {
-    const botLogs = parseEventLogs({
-      abi: flashBot.abi,
-      logs: receipt.logs.filter(
-        (log: { address: string }) => log.address.toLowerCase() === flashBot.address.toLowerCase()
-      ),
-      strict: false,
-    });
-
-    console.log("Bot execution logs:");
-    for (const log of botLogs) {
-      if ("eventName" in log && log.eventName === "Log") {
-        const args = log.args as { message?: string; value?: bigint };
-        if (typeof args.message === "string" && typeof args.value === "bigint") {
-          console.log(" ", args.message + ":", args.value.toString());
-        }
-      }
-    }
-  }
-
-  const flashPoolBalanceAfter = await flashPool.read.getBalance([aliceToken.address]);
-  const botAliceAfter = await aliceToken.read.balanceOf([flashBotAddress]);
-
-  assertCondition(
-    flashPoolBalanceAfter >= flashPoolBalanceBefore + expectedFee,
-    "Flash pool did not receive the expected repayment fee"
-  );
-  assertCondition(botAliceAfter >= botAliceBefore, "Bot ALC balance unexpectedly decreased");
-
-  return {
-    expectedFee,
-    flashPoolBalanceBefore,
-    flashPoolBalanceAfter,
-    botAliceBefore,
-    botAliceAfter,
-  };
-}
+//#endregion
 
 async function main() {
-  const { viem } = await network.connect({ network: "localhost" });
+  const connection: any = await network.connect({ network: "localhost" });
+  const { viem } = connection;
   const publicClient = await viem.getPublicClient();
   const [A, B, C, D] = await viem.getWalletClients();
   const a = A.account.address;
@@ -178,192 +119,84 @@ async function main() {
   const flashBot = await viem.getContractAt("FlashLoanBot", deployed.flashBot);
 
   printSection("Part 1: Setup Reserves and Flash Contracts");
-
-  await setPrices(oracle, aliceToken, bobToken, a, publicClient, BOB_PRICE_HEALTHY);
-
-  await waitForReceipt(publicClient, await aliceFaucet.write.claim({ account: a }));
-  await waitForReceipt(publicClient, await bobFaucet.write.claim({ account: a }));
-  await waitForReceipt(publicClient, await bobFaucet.write.claim({ account: b }));
-  await waitForReceipt(publicClient, await bobFaucet.write.claim({ account: c }));
-  await waitForReceipt(publicClient, await bobFaucet.write.claim({ account: d }));
-
-  const reserveLiquidity = 5_000n * ONE;
-  await waitForReceipt(
+  await runSetupDemo({
     publicClient,
-    await aliceToken.write.approve([pool.address, reserveLiquidity], { account: a })
-  );
-  await waitForReceipt(
-    publicClient,
-    await pool.write.deposit([aliceToken.address, reserveLiquidity], { account: a })
-  );
-  console.log("Reserve liquidity funded:", formatToken(reserveLiquidity), "ALC");
-
-  const flashLiquidity = 1_000n * ONE;
-  await waitForReceipt(
-    publicClient,
-    await aliceToken.write.approve([flashPool.address, flashLiquidity], { account: a })
-  );
-  await waitForReceipt(
-    publicClient,
-    await flashPool.write.deposit([aliceToken.address, flashLiquidity], { account: a })
-  );
-  console.log("Flash pool funded:", formatToken(flashLiquidity), "ALC");
-
-  const swapLiquidity = 1_000n * ONE;
-  await waitForReceipt(
-    publicClient,
-    await aliceToken.write.approve([flashSwap.address, swapLiquidity], { account: a })
-  );
-  await waitForReceipt(
-    publicClient,
-    await bobToken.write.approve([flashSwap.address, swapLiquidity], { account: a })
-  );
-  await waitForReceipt(
-    publicClient,
-    await flashSwap.write.addLiquidity([aliceToken.address, swapLiquidity], { account: a })
-  );
-  await waitForReceipt(
-    publicClient,
-    await flashSwap.write.addLiquidity([bobToken.address, swapLiquidity], { account: a })
-  );
-  console.log("Swap liquidity funded:", formatToken(swapLiquidity), "ALC and BOB");
+    oracle,
+    aliceFaucet,
+    bobFaucet,
+    aliceToken,
+    bobToken,
+    pool,
+    flashPool,
+    flashSwap,
+    ownerAddress: a,
+    borrowerAddresses: [b, c, d],
+    one: ONE,
+    healthyBobPrice: BOB_PRICE_HEALTHY,
+    formatToken,
+    waitForReceipt,
+    setPrices,
+  });
 
   printSection("Part 2: Direct Liquidation");
-
-  const directVaultId = await createDebtVault(
+  await runDirectLiquidationDemo({
     pool,
-    bobToken,
-    B,
-    100n * ONE,
-    aliceToken.address,
-    100n * ONE,
-    publicClient
-  );
-  await logVaultState(pool, directVaultId, aliceToken.address, "Before crash");
-  await setPrices(
     oracle,
     aliceToken,
     bobToken,
-    a,
+    borrowerClient: B,
+    ownerAddress: a,
+    one: ONE,
+    directLiquidationBobPrice: BOB_PRICE_DIRECT_LIQUIDATION,
     publicClient,
-    BOB_PRICE_DIRECT_LIQUIDATION
-  );
-  const directBefore = await logVaultState(pool, directVaultId, aliceToken.address, "After crash");
-  assertCondition(directBefore.hf < ONE, "Direct liquidation vault is not liquidatable");
-
-  const directRepayAmount = 100n * ONE;
-  const directClaimableBefore = await pool.read.getUserClaimableShares([a, bobToken.address]);
-  await waitForReceipt(
-    publicClient,
-    await aliceToken.write.approve([pool.address, directRepayAmount], { account: a })
-  );
-  await waitForReceipt(
-    publicClient,
-    await pool.write.liquidate([directVaultId, aliceToken.address, bobToken.address, directRepayAmount], { account: a })
-  );
-  const directAfter = await logVaultState(pool, directVaultId, aliceToken.address, "After direct liquidation");
-  const directClaimableAfter = await pool.read.getUserClaimableShares([a, bobToken.address]);
-  const directSeizedShares = directClaimableAfter - directClaimableBefore;
-  console.log("Direct liquidator seized shares:", directSeizedShares.toString());
-  assertCondition(directAfter.debt < directBefore.debt, "Direct liquidation did not reduce debt");
+    assertCondition,
+    waitForReceipt,
+    setPrices,
+    createDebtVault,
+    logVaultState,
+  });
 
   printSection("Part 3: Single Flash Loan Liquidation");
-
-  await setPrices(oracle, aliceToken, bobToken, a, publicClient, BOB_PRICE_HEALTHY);
-  const flashVaultId = await createDebtVault(
+  await runSingleFlashLiquidationDemo({
     pool,
-    bobToken,
-    C,
-    100n * ONE,
-    aliceToken.address,
-    100n * ONE,
-    publicClient
-  );
-  await setPrices(
     oracle,
     aliceToken,
     bobToken,
-    a,
-    publicClient,
-    BOB_PRICE_DIRECT_LIQUIDATION
-  );
-  const flashBefore = await logVaultState(pool, flashVaultId, aliceToken.address, "Before flash liquidation");
-  assertCondition(flashBefore.hf < ONE, "Flash liquidation vault is not liquidatable");
-
-  const singleFlash = await executeFlashLiquidation(
-    flashBot,
     flashPool,
-    flashBot.address,
-    aliceToken,
-    bobToken,
-    flashVaultId,
-    a,
+    flashBot,
+    borrowerClient: C,
+    ownerAddress: a,
+    healthyBobPrice: BOB_PRICE_HEALTHY,
+    directLiquidationBobPrice: BOB_PRICE_DIRECT_LIQUIDATION,
+    one: ONE,
     publicClient,
-    100n * ONE,
-    true
-  );
-  const flashAfter = await logVaultState(pool, flashVaultId, aliceToken.address, "After flash liquidation");
-  const botBobClaimableShares = await pool.read.getUserClaimableShares([flashBot.address, bobToken.address]);
-  console.log("Flash pool fee earned:", formatToken(BigInt(singleFlash.flashPoolBalanceAfter - singleFlash.flashPoolBalanceBefore)), "ALC");
-  console.log("Bot ALC after single flash:", formatToken(singleFlash.botAliceAfter));
-  console.log("Bot remaining claimable BOB shares:", botBobClaimableShares.toString());
-  assertCondition(flashAfter.debt < flashBefore.debt, "Flash liquidation did not reduce debt");
+    formatToken,
+    assertCondition,
+    setPrices,
+    createDebtVault,
+    logVaultState,
+  });
 
   printSection("Part 4: Repeated Flash Liquidations Until Healthy");
-
-  await setPrices(oracle, aliceToken, bobToken, a, publicClient, BOB_PRICE_HEALTHY);
-  const multiVaultId = await createDebtVault(
+  await runRepeatedFlashLiquidationDemo({
     pool,
-    bobToken,
-    D,
-    100n * ONE,
-    aliceToken.address,
-    90n * ONE,
-    publicClient
-  );
-  await setPrices(
     oracle,
     aliceToken,
     bobToken,
-    a,
+    flashPool,
+    flashBot,
+    borrowerClient: D,
+    ownerAddress: a,
+    healthyBobPrice: BOB_PRICE_HEALTHY,
+    multiLiquidationBobPrice: BOB_PRICE_MULTI_LIQUIDATION,
+    one: ONE,
     publicClient,
-    BOB_PRICE_MULTI_LIQUIDATION
-  );
-
-  let iteration = 0;
-  let multiState = await logVaultState(pool, multiVaultId, aliceToken.address, "Initial multi-liquidation state");
-  assertCondition(multiState.hf < ONE, "Multi-liquidation vault is already healthy");
-
-  while (multiState.hf < ONE) {
-    iteration += 1;
-    const currentDebt = await pool.read.getDebtVaultDebtAmount([multiVaultId, aliceToken.address]);
-    console.log("Iteration", iteration, "flash borrow amount:", formatToken(currentDebt), "ALC");
-
-    await executeFlashLiquidation(
-      flashBot,
-      flashPool,
-      flashBot.address,
-      aliceToken,
-      bobToken,
-      multiVaultId,
-      a,
-      publicClient,
-      currentDebt,
-      false
-    );
-
-    multiState = await logVaultState(
-      pool,
-      multiVaultId,
-      aliceToken.address,
-      `State after flash liquidation ${iteration}`
-    );
-
-    assertCondition(iteration < 10, "Too many flash liquidations without restoring health");
-  }
-
-  console.log("Vault restored healthy after", iteration, "flash liquidations");
-  console.log("Final healthy HF:", formatToken(multiState.hf));
+    formatToken,
+    assertCondition,
+    setPrices,
+    createDebtVault,
+    logVaultState,
+  });
 
   printSection("Part 5: Pool Incentives Demo");
   await runIncentivesDemo({
